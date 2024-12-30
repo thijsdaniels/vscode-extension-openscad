@@ -1,0 +1,8 @@
+# OS Artifacts
+.DS_Store
+
+# Node Artifacts
+node_modules
+
+# Build Artifacts
+dist

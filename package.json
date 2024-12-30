@@ -1,0 +1,73 @@
+{
+	"name": "vscode-extension-openscad",
+	"version": "0.1.0",
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "npm run compile:extension && npm run compile:webview",
+		"compile:extension": "esbuild ./src/extension.ts --bundle --outdir=dist --external:vscode --external:fsevents --platform=node --format=cjs --sourcemap",
+		"compile:webview": "esbuild ./src/webview/preview.ts --bundle --outdir=dist/webview --platform=browser --format=esm --sourcemap --external:vscode",
+		"watch": "concurrently \"npm:watch:*\"",
+		"watch:extension": "npm run compile:extension -- --watch",
+		"watch:webview": "npm run compile:webview -- --watch",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./dist/test/runTest.js"
+	},
+	"dependencies": {
+		"chokidar": "^3.5.3",
+		"three": "^0.154.0"
+	},
+	"devDependencies": {
+		"@types/node": "^16.x",
+		"@types/three": "^0.154.0",
+		"@types/vscode": "^1.80.0",
+		"@typescript-eslint/eslint-plugin": "^6.0.0",
+		"@typescript-eslint/parser": "^6.0.0",
+		"eslint": "^8.44.0",
+		"typescript": "^5.1.6",
+		"vscode-test": "^1.6.1",
+		"esbuild": "^0.19.5",
+		"concurrently": "^8.2.2"
+	},
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"activationEvents": [
+		"onCommand:openscad.showPreview",
+		"onLanguage:scad"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "openscad.showPreview",
+				"title": "Show OpenSCAD Preview"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "openscad.showPreview",
+				"key": "ctrl+shift+v",
+				"mac": "cmd+shift+v",
+				"when": "editorLangId == scad"
+			}
+		],
+		"languages": [
+			{
+				"id": "scad",
+				"extensions": [
+					".scad"
+				],
+				"aliases": [
+					"OpenSCAD"
+				]
+			}
+		]
+	},
+	"main": "./dist/extension.js",
+	"files": [
+		"dist",
+		"node_modules/three/build/three.module.js",
+		"node_modules/three/examples/jsm/controls/OrbitControls.js",
+		"node_modules/three/examples/jsm/loaders/STLLoader.js"
+	]
+}
