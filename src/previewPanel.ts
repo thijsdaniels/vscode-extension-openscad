@@ -133,6 +133,7 @@ export class PreviewPanel {
 					<meta charset="UTF-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 					<title>OpenSCAD Preview</title>
+					<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 					<style>
 						body { 
 							margin: 0; 
@@ -141,6 +142,7 @@ export class PreviewPanel {
 							display: flex;
 						}
 						#preview {
+							position: relative;
 							flex-grow: 1;
 							height: 100vh;
 						}
@@ -153,9 +155,14 @@ export class PreviewPanel {
 							border-left: 1px solid var(--vscode-panel-border);
 							padding: 1rem;
 							overflow-y: auto;
+							display: flex;
+							flex-direction: column;
+							gap: 2rem;
 						}
 						.parameter-group {
-                            margin-bottom: 2rem;
+							display: flex;
+							flex-direction: column;
+							gap: 0.25rem
                         }
                         .parameter-group h3 {
                             margin: 0 0 0.5rem 0;
@@ -166,11 +173,12 @@ export class PreviewPanel {
 							justify-content: space-between;
 							align-items: baseline;
 							gap: 1rem;
-                            margin-bottom: 0.5rem;
                         }
                         .parameter label {
                             display: block;
+							font-family: var(--vscode-editor-font-family);
                             color: var(--vscode-foreground);
+							opacity: 0.75;
                         }
                         .parameter input {
                             background: var(--vscode-input-background);
@@ -179,7 +187,44 @@ export class PreviewPanel {
                             padding: 0.25rem;
                         }
 						.parameter input:not([type="checkbox"]) {
-							width: 5rem;
+							width: 4rem;
+						}
+						.toolbar {
+							position: absolute;
+							bottom: 1rem;
+							left: 50%;
+							transform: translateX(-50%);
+							display: flex;
+							gap: 0.5rem;
+							background: var(--vscode-editor-background);
+							padding: 0.5rem;
+							border-radius: 0.5rem;
+							box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+						}
+						.toolbar-button {
+							background: none;
+							border: none;
+							color: var(--vscode-foreground);
+							padding: 0.5rem;
+							border-radius: 0.25rem;
+							cursor: pointer;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+						}
+						.toolbar-button:hover {
+							background: var(--vscode-toolbar-hoverBackground);
+						}
+						.toolbar-button.active {
+							background: var(--vscode-toolbar-activeBackground);
+							color: var(--vscode-toolbar-activeForeground);
+						}
+						.material-symbols-outlined {
+							font-variation-settings:
+								'FILL' 0,
+								'wght' 400,
+								'GRAD' 0,
+								'opsz' 24
 						}
 					</style>
 				</head>

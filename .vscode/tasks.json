@@ -3,7 +3,13 @@
 	"tasks": [
 		{
 			"type": "npm",
-			"script": "watch",
+			"script": "compile",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"label": "npm: compile",
+			"detail": "Compile extension and webview",
 			"problemMatcher": {
 				"owner": "esbuild",
 				"pattern": {
@@ -15,17 +21,9 @@
 				},
 				"background": {
 					"activeOnStart": true,
-					"beginsPattern": "^\\[watch\\] build started",
-					"endsPattern": "^\\[watch\\] build finished"
+					"beginsPattern": "^\\s*rebuilding\\.\\.\\.$",
+					"endsPattern": "^\\s*rebuilt in"
 				}
-			},
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
 			}
 		}
 	]
