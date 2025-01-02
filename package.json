@@ -29,19 +29,18 @@
 		"vscode": "^1.80.0"
 	},
 	"activationEvents": [
-		"onCommand:openscad.showPreview",
 		"onLanguage:scad"
 	],
 	"contributes": {
 		"commands": [
 			{
-				"command": "openscad.showPreview",
+				"command": "openscad.showPanel",
 				"title": "Show OpenSCAD Preview"
 			}
 		],
 		"keybindings": [
 			{
-				"command": "openscad.showPreview",
+				"command": "openscad.showPanel",
 				"key": "ctrl+shift+v",
 				"mac": "cmd+shift+v",
 				"when": "editorLangId == scad"

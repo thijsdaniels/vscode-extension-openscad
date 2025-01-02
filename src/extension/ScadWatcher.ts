@@ -1,8 +1,8 @@
 import { spawn } from "child_process";
 import { FSWatcher, watch } from "chokidar";
-import * as vscode from "vscode";
-import { ScadParameter } from "./types";
 import { readFile } from "fs/promises";
+import * as vscode from "vscode";
+import { ScadParameter } from "../ScadParameter";
 
 export class ScadWatcher {
 	private watcher: FSWatcher;

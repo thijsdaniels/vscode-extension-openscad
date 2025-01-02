@@ -1,6 +1,6 @@
-import { ScadParameter } from "./types";
+import { ScadParameter } from "../ScadParameter";
 
-export class ParameterManager {
+export class ScadParameters {
 	private parameters: Map<string, ScadParameter> = new Map();
 	private onChangeCallback?: () => void;
 

@@ -8,9 +8,9 @@ const commonConfig = {
 /** @type {import('esbuild').BuildOptions} */
 const extensionConfig = {
 	...commonConfig,
-	entryPoints: ["src/extension.ts"],
+	entryPoints: ["src/extension/index.ts"],
 	bundle: true,
-	outdir: "dist",
+	outfile: "dist/extension.js",
 	external: ["vscode", "fsevents"],
 	platform: "node",
 	format: "cjs",
@@ -19,9 +19,9 @@ const extensionConfig = {
 /** @type {import('esbuild').BuildOptions} */
 const webviewConfig = {
 	...commonConfig,
-	entryPoints: ["src/webview/preview.ts"],
+	entryPoints: ["src/webview/index.ts"],
 	bundle: true,
-	outdir: "dist/webview",
+	outfile: "dist/webview.js",
 	platform: "browser",
 	format: "esm",
 };

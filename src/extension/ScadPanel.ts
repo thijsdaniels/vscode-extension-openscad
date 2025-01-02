@@ -1,27 +1,27 @@
-import * as fs from "fs";
 import * as vscode from "vscode";
-import { ScadWatcher } from "./watcher";
-import { ScadParameter } from "./types";
-import { ParameterManager } from "./parameterManager";
+import { ScadParameter } from "../ScadParameter";
+import { ScadParameters } from "./ScadParameters";
+import { ScadWatcher } from "./ScadWatcher";
 
-export class PreviewPanel {
-	private static currentPanel: PreviewPanel | undefined;
-	private readonly _panel: vscode.WebviewPanel;
-	private readonly _extensionUri: vscode.Uri;
-	private _disposables: vscode.Disposable[] = [];
-	private _watcher: ScadWatcher;
-	private _parameterManager: ParameterManager;
+export class ScadPanel {
+	private static currentPanel: ScadPanel | undefined;
+
+	private readonly panel: vscode.WebviewPanel;
+	private readonly extensionUri: vscode.Uri;
+	private disposables: vscode.Disposable[] = [];
+	private scadWatcher: ScadWatcher;
+	private scadParameters: ScadParameters;
 
 	private constructor(
 		panel: vscode.WebviewPanel,
 		extensionUri: vscode.Uri,
 		scadUri: vscode.Uri
 	) {
-		this._panel = panel;
-		this._extensionUri = extensionUri;
+		this.panel = panel;
+		this.extensionUri = extensionUri;
 
 		// Configure webview
-		this._panel.webview.options = {
+		this.panel.webview.options = {
 			enableScripts: true,
 			localResourceRoots: [
 				vscode.Uri.joinPath(extensionUri, "dist"),
@@ -34,56 +34,56 @@ export class PreviewPanel {
 		this._updateWebview();
 
 		// Set up parameter manager
-		this._parameterManager = new ParameterManager(() => {
+		this.scadParameters = new ScadParameters(() => {
 			// Trigger re-render when parameters change
-			this._watcher.renderWithParameters(
-				this._parameterManager.getParameterArgs()
+			this.scadWatcher.renderWithParameters(
+				this.scadParameters.getParameterArgs()
 			);
 		});
 
 		// Set up watcher for SCAD file
 		const scadPath = scadUri.fsPath;
 
-		this._watcher = new ScadWatcher(
+		this.scadWatcher = new ScadWatcher(
 			(stlData) => {
 				const base64Data = stlData.toString("base64");
 
-				this._panel.webview.postMessage({
+				this.panel.webview.postMessage({
 					type: "update",
 					content: base64Data,
 				});
 			},
 			(parameters) => {
 				// Update parameter manager when new parameters are discovered
-				this._parameterManager.updateDefinitions(parameters);
+				this.scadParameters.updateDefinitions(parameters);
 				// Update UI with current parameter values
-				this._updateParameters(this._parameterManager.getParameters());
+				this._updateParameters(this.scadParameters.getParameters());
 			}
 		);
 
-		this._watcher.watch(scadPath);
+		this.scadWatcher.watch(scadPath);
 
 		// Handle messages from the webview
-		this._panel.webview.onDidReceiveMessage(
+		this.panel.webview.onDidReceiveMessage(
 			(message) => {
 				switch (message.type) {
 					case "parameterChanged":
 						const { name, value } = message;
-						this._parameterManager.updateValue(name, value);
+						this.scadParameters.updateValue(name, value);
 						return;
 				}
 			},
 			null,
-			this._disposables
+			this.disposables
 		);
 
 		// Clean up when panel is closed
-		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+		this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 	}
 
 	public static createOrShow(extensionUri: vscode.Uri, scadUri: vscode.Uri) {
-		if (PreviewPanel.currentPanel) {
-			PreviewPanel.currentPanel._panel.reveal(vscode.ViewColumn.Beside);
+		if (ScadPanel.currentPanel) {
+			ScadPanel.currentPanel.panel.reveal(vscode.ViewColumn.Beside);
 			return;
 		}
 
@@ -108,25 +108,25 @@ export class PreviewPanel {
 			}
 		});
 
-		PreviewPanel.currentPanel = new PreviewPanel(panel, extensionUri, scadUri);
+		ScadPanel.currentPanel = new ScadPanel(panel, extensionUri, scadUri);
 	}
 
 	private _updateParameters(parameters: ScadParameter[]) {
-		this._panel.webview.postMessage({
+		this.panel.webview.postMessage({
 			type: "updateParameters",
 			parameters,
 		});
 	}
 
 	private _updateWebview() {
-		const webview = this._panel.webview;
+		const webview = this.panel.webview;
 
 		// Get path to compiled preview script
 		const scriptUri = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "preview.js")
+			vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")
 		);
 
-		this._panel.webview.html = /* html */ `
+		this.panel.webview.html = /* html */ `
 			<!DOCTYPE html>
 			<html>
 				<head>
@@ -242,11 +242,11 @@ export class PreviewPanel {
 	}
 
 	public dispose() {
-		PreviewPanel.currentPanel = undefined;
-		this._watcher.close();
-		this._panel.dispose();
-		while (this._disposables.length) {
-			const x = this._disposables.pop();
+		ScadPanel.currentPanel = undefined;
+		this.scadWatcher.close();
+		this.panel.dispose();
+		while (this.disposables.length) {
+			const x = this.disposables.pop();
 			if (x) x.dispose();
 		}
 	}
