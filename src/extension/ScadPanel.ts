@@ -12,6 +12,7 @@ export class ScadPanel {
 	private scadWatcher: ScadWatcher;
 	private scadParameters: ScadParameters;
 	private lastStlData: Buffer | undefined;
+	private isWebviewReady: boolean = false;
 	private readonly scadPath: string;
 
 	private constructor(
@@ -69,7 +70,9 @@ export class ScadPanel {
 				// Update parameter manager when new parameters are discovered
 				this.scadParameters.updateDefinitions(parameters);
 				// Update UI with current parameter values
-				this._updateParameters(this.scadParameters.getParameters());
+				if (this.isWebviewReady) {
+					this._updateParameters(this.scadParameters.getParameters());
+				}
 			},
 			() => {
 				this.panel.webview.postMessage({
@@ -86,6 +89,16 @@ export class ScadPanel {
 		this.panel.webview.onDidReceiveMessage(
 			(message) => {
 				switch (message.type) {
+					case "ready":
+						this.isWebviewReady = true;
+						if (this.lastStlData) {
+							this.panel.webview.postMessage({
+								type: "update",
+								content: this.lastStlData.toString("base64"),
+							});
+						}
+						this._updateParameters(this.scadParameters.getParameters());
+						return;
 					case "parameterChanged":
 						const { name, value } = message;
 						this.scadParameters.updateValue(name, value);

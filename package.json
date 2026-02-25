@@ -34,9 +34,19 @@
 		"commands": [
 			{
 				"command": "openscad.showPanel",
-				"title": "Show OpenSCAD Preview"
+				"title": "Show OpenSCAD Preview",
+				"icon": "$(open-preview)"
 			}
 		],
+		"menus": {
+			"editor/title": [
+				{
+					"command": "openscad.showPanel",
+					"group": "navigation",
+					"when": "resourceLangId == scad || editorLangId == scad"
+				}
+			]
+		},
 		"keybindings": [
 			{
 				"command": "openscad.showPanel",
