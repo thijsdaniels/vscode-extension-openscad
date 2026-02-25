@@ -2,13 +2,18 @@ import {
 	provideVSCodeDesignSystem,
 	vsCodeCheckbox,
 	vsCodeTextField,
+	vsCodeButton,
 } from "@vscode/webview-ui-toolkit";
 import { ParameterControls } from "./ParameterControls";
-import { Preview } from "./Preview";
+import { Preview } from "./preview";
 
 const vscode = acquireVsCodeApi();
 
-provideVSCodeDesignSystem().register(vsCodeCheckbox(), vsCodeTextField());
+provideVSCodeDesignSystem().register(
+	vsCodeCheckbox(),
+	vsCodeTextField(),
+	vsCodeButton(),
+);
 
 let preview: Preview;
 let parameterControls: ParameterControls;
@@ -32,8 +37,15 @@ window.addEventListener("load", () => {
 				name,
 				value,
 			});
-		}
+		},
 	);
+
+	const exportButton = document.getElementById("export-button");
+	if (exportButton) {
+		exportButton.addEventListener("click", () => {
+			vscode.postMessage({ type: "exportStl" });
+		});
+	}
 
 	vscode.postMessage({ type: "ready" });
 });

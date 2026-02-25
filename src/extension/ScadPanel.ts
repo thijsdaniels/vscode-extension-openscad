@@ -11,14 +11,17 @@ export class ScadPanel {
 	private disposables: vscode.Disposable[] = [];
 	private scadWatcher: ScadWatcher;
 	private scadParameters: ScadParameters;
+	private lastStlData: Buffer | undefined;
+	private readonly scadPath: string;
 
 	private constructor(
 		panel: vscode.WebviewPanel,
 		extensionUri: vscode.Uri,
-		scadUri: vscode.Uri
+		scadUri: vscode.Uri,
 	) {
 		this.panel = panel;
 		this.extensionUri = extensionUri;
+		this.scadPath = scadUri.fsPath;
 
 		// Configure webview
 		this.panel.webview.options = {
@@ -37,7 +40,7 @@ export class ScadPanel {
 		this.scadParameters = new ScadParameters(() => {
 			// Trigger re-render when parameters change
 			this.scadWatcher.renderWithParameters(
-				this.scadParameters.getParameterArgs()
+				this.scadParameters.getParameterArgs(),
 			);
 		});
 
@@ -46,6 +49,9 @@ export class ScadPanel {
 
 		this.scadWatcher = new ScadWatcher(
 			(stlData) => {
+				if (stlData.toString() !== "loading") {
+					this.lastStlData = stlData;
+				}
 				const base64Data = stlData.toString("base64");
 
 				this.panel.webview.postMessage({
@@ -71,7 +77,7 @@ export class ScadPanel {
 					loading: true,
 					message: "Generating model...",
 				});
-			}
+			},
 		);
 
 		this.scadWatcher.watch(scadPath);
@@ -84,10 +90,13 @@ export class ScadPanel {
 						const { name, value } = message;
 						this.scadParameters.updateValue(name, value);
 						return;
+					case "exportStl":
+						this._exportStl();
+						return;
 				}
 			},
 			null,
-			this.disposables
+			this.disposables,
 		);
 
 		// Clean up when panel is closed
@@ -111,7 +120,7 @@ export class ScadPanel {
 					vscode.Uri.joinPath(extensionUri, "dist"),
 					vscode.Uri.joinPath(extensionUri, "node_modules", "three"),
 				],
-			}
+			},
 		);
 
 		// Handle webview errors
@@ -131,12 +140,44 @@ export class ScadPanel {
 		});
 	}
 
+	private async _exportStl() {
+		if (!this.lastStlData) {
+			vscode.window.showErrorMessage("No STL data available to export.");
+			return;
+		}
+
+		const defaultUri = vscode.Uri.file(
+			this.scadPath.replace(/\.scad$/i, ".stl"),
+		);
+		const uri = await vscode.window.showSaveDialog({
+			defaultUri,
+			filters: {
+				"STL Files": ["stl"],
+			},
+			title: "Export STL",
+		});
+
+		if (uri) {
+			try {
+				await vscode.workspace.fs.writeFile(
+					uri,
+					new Uint8Array(this.lastStlData),
+				);
+				vscode.window.showInformationMessage(
+					`Successfully exported STL to ${uri.fsPath}`,
+				);
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to export STL: ${error}`);
+			}
+		}
+	}
+
 	private _updateWebview() {
 		const webview = this.panel.webview;
 
 		// Get path to compiled preview script
 		const scriptUri = webview.asWebviewUri(
-			vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")
+			vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js"),
 		);
 
 		this.panel.webview.html = /* html */ `
@@ -163,14 +204,24 @@ export class ScadPanel {
 							width: 100%;
 							height: 100%;
 						}
-						#parameters {
+						#parameters-panel {
 							background: var(--vscode-editor-background);
 							border-left: 1px solid var(--vscode-panel-border);
+							display: flex;
+							flex-direction: column;
+							width: 300px;
+						}
+						#parameters {
 							padding: 1rem;
 							overflow-y: auto;
 							display: flex;
 							flex-direction: column;
 							gap: 2rem;
+							flex-grow: 1;
+						}
+						#export-container {
+							padding: 1rem;
+							border-top: 1px solid var(--vscode-panel-border);
 						}
 						.parameter-group {
 							display: flex;
@@ -287,8 +338,13 @@ export class ScadPanel {
 						</div>
 						<!-- Preview will be inserted here -->
 					</div>
-					<div id="parameters">
-						<!-- Parameter controls will be dynamically inserted here -->
+					<div id="parameters-panel">
+						<div id="parameters">
+							<!-- Parameter controls will be dynamically inserted here -->
+						</div>
+						<div id="export-container">
+							<vscode-button id="export-button" style="width: 100%">Export STL</vscode-button>
+						</div>
 					</div>
 					<script src="${scriptUri}" type="module"></script>
 				</body>
