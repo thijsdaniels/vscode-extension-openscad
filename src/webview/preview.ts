@@ -1,10 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import { ScadParameter } from "../ScadParameter";
 import { AxesWidget } from "./AxesWidget";
-import { ParameterControls } from "./ParameterControls";
-import { Toolbar, ViewSettings } from "./Toolbar";
+import { Surfaces, Toolbar, ViewSettings } from "./Toolbar";
+import buildPlate from "./buildPlate.stl";
 
 export class Preview {
 	private scene!: THREE.Scene;
@@ -13,16 +12,22 @@ export class Preview {
 	private orthoCamera!: THREE.OrthographicCamera;
 	private renderer!: THREE.WebGLRenderer;
 	private controls!: OrbitControls;
-	private mesh?: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+	private mesh!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
 	private gridHelper!: THREE.GridHelper;
 	private settings: ViewSettings;
 	private axesWidget!: AxesWidget;
 	private toolbar!: Toolbar;
-	private parameterControls!: ParameterControls;
+	private clock: THREE.Clock;
+	private buildPlateMesh!: THREE.Mesh;
+	private buildPlateGrid!: THREE.GridHelper;
+	private loadingOverlay: HTMLElement;
+	private loadingGeometry = new THREE.SphereGeometry(20, 32, 32);
+	private isLoading: boolean = true;
 
 	constructor(container: HTMLElement) {
 		this.settings = new ViewSettings();
 		this.scene = new THREE.Scene();
+		this.clock = new THREE.Clock();
 
 		const { width, height } = container.getBoundingClientRect();
 		this.initRenderer(container, width, height);
@@ -37,15 +42,23 @@ export class Preview {
 			this.handleSettingChange.bind(this)
 		);
 
-		const paramContainer = document.getElementById("parameters");
+		this.loadingOverlay = container.querySelector("#loading-overlay")!;
 
-		if (!paramContainer) {
-			throw new Error("Parameters container not found");
-		}
-
-		this.parameterControls = new ParameterControls(paramContainer);
+		// Listen for messages from the extension
+		window.addEventListener("message", (event) => {
+			const message = event.data;
+			switch (message.type) {
+				case "loadingState":
+					if (message.loading) {
+						this.showLoading();
+					}
+					break;
+			}
+		});
 
 		this.setupResizeHandler(container);
+
+		this.animate();
 	}
 
 	private initRenderer(container: HTMLElement, width: number, height: number) {
@@ -62,10 +75,10 @@ export class Preview {
 			75,
 			width / height,
 			0.1,
-			1000
+			10000
 		);
-		this.perspectiveCamera.position.y = 50;
-		this.perspectiveCamera.position.z = 100;
+		this.perspectiveCamera.position.y = 100;
+		this.perspectiveCamera.position.z = 200;
 
 		this.activeCamera = this.perspectiveCamera;
 
@@ -77,7 +90,7 @@ export class Preview {
 			viewSize,
 			-viewSize,
 			0.1,
-			1000
+			10000
 		);
 
 		// Initial sync
@@ -87,6 +100,7 @@ export class Preview {
 			this.perspectiveCamera,
 			this.renderer.domElement
 		);
+		this.controls.zoomSpeed = 0.5;
 		this.controls.addEventListener("change", () => this.syncCameras());
 	}
 
@@ -98,7 +112,7 @@ export class Preview {
 
 	private initScene() {
 		this.scene.background = new THREE.Color(0x2c2a2e);
-		this.scene.fog = new THREE.FogExp2(0x2c2a2e, 0.0025);
+		this.scene.fog = new THREE.FogExp2(0x2c2a2e, 0.001);
 
 		this.scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
@@ -118,18 +132,54 @@ export class Preview {
 		this.scene.add(pointLight);
 
 		this.gridHelper = new THREE.GridHelper(10000, 1000, 0x888888, 0x444444);
+		this.gridHelper.material.depthTest = false;
+		this.gridHelper.visible = this.settings.surfaces === Surfaces.Grid;
 		this.scene.add(this.gridHelper);
+
+		this.initBuildPlate();
+		this.initModel();
 
 		this.renderer.shadowMap.enabled = true;
 	}
 
+	private initBuildPlate() {
+		const loader = new STLLoader();
+		const geometry = loader.parse(buildPlate.buffer);
+		geometry.rotateX(-Math.PI / 2);
+
+		const material = new THREE.MeshStandardMaterial({
+			color: 0x403e41,
+			depthTest: false,
+			fog: false,
+			metalness: 0.25,
+			roughness: 0.75,
+		});
+
+		this.buildPlateMesh = new THREE.Mesh(geometry, material);
+		this.buildPlateMesh.receiveShadow = true;
+		this.buildPlateMesh.visible =
+			this.settings.surfaces === Surfaces.BuildPlate;
+		this.scene.add(this.buildPlateMesh);
+
+		this.buildPlateGrid = new THREE.GridHelper(250, 25, 0x888888, 0x555555);
+		this.buildPlateGrid.material.depthTest = false;
+		this.buildPlateGrid.material.fog = false;
+		this.buildPlateGrid.visible =
+			this.settings.surfaces === Surfaces.BuildPlate;
+		this.scene.add(this.buildPlateGrid);
+	}
+
 	private handleSettingChange(setting: keyof ViewSettings) {
 		switch (setting) {
+			case "surfaces":
+				this.gridHelper.visible = this.settings.surfaces === Surfaces.Grid;
+				this.buildPlateMesh.visible =
+					this.settings.surfaces === Surfaces.BuildPlate;
+				this.buildPlateGrid.visible =
+					this.settings.surfaces === Surfaces.BuildPlate;
+				break;
 			case "wireframe":
-				if (this.mesh) {
-					(this.mesh.material as THREE.MeshStandardMaterial).wireframe =
-						this.settings.wireframe;
-				}
+				this.mesh.material.wireframe = this.settings.wireframe;
 				break;
 			case "orthographic":
 				this.activeCamera = this.settings.orthographic
@@ -138,18 +188,31 @@ export class Preview {
 				break;
 			case "shadows":
 				this.renderer.shadowMap.enabled = this.settings.shadows;
-				if (this.mesh) {
-					this.mesh.castShadow = this.settings.shadows;
-					this.mesh.receiveShadow = this.settings.shadows;
-				}
-				break;
-			case "grid":
-				this.gridHelper.visible = this.settings.grid;
+				this.mesh.castShadow = this.settings.shadows;
+				this.mesh.receiveShadow = this.settings.shadows;
 				break;
 		}
 	}
 
-	loadSTL(stlContent: string) {
+	public initModel() {
+		const material = new THREE.MeshStandardMaterial({
+			color: 0xffffff,
+			flatShading: false,
+			fog: false,
+		});
+
+		this.mesh = new THREE.Mesh(this.loadingGeometry, material);
+
+		this.mesh.castShadow = true;
+		this.mesh.receiveShadow = true;
+		this.mesh.material.wireframe = this.settings.wireframe;
+		this.mesh.castShadow = this.settings.shadows;
+		this.mesh.receiveShadow = this.settings.shadows;
+
+		this.scene.add(this.mesh);
+	}
+
+	public loadSTL(stlContent: string) {
 		const loader = new STLLoader();
 		const binaryString = window.atob(stlContent);
 
@@ -161,35 +224,26 @@ export class Preview {
 		const geometry = loader.parse(bytes.buffer);
 		geometry.rotateX(-Math.PI / 2);
 
-		if (this.mesh) {
-			this.scene.remove(this.mesh);
-		}
+		this.mesh.geometry = geometry;
 
-		const material = new THREE.MeshStandardMaterial({
-			color: 0xffffff,
-			flatShading: false,
-		});
-
-		this.mesh = new THREE.Mesh(geometry, material);
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-
-		this.scene.add(this.mesh);
-
-		if (this.mesh) {
-			this.mesh.material.wireframe = this.settings.wireframe;
-			this.mesh.castShadow = this.settings.shadows;
-			this.mesh.receiveShadow = this.settings.shadows;
-		}
+		this.hideLoading();
 	}
 
-	animate() {
+	private showLoading() {
+		this.isLoading = true;
+		this.mesh.geometry = this.loadingGeometry;
+		this.loadingOverlay.style.display = "flex";
+	}
+
+	private hideLoading() {
+		this.isLoading = false;
+		this.loadingOverlay.style.display = "none";
+	}
+
+	private animate() {
 		requestAnimationFrame(this.animate.bind(this));
 
-		if (this.mesh) {
-			this.mesh.rotation.y += 0.01;
-		}
-
+		this.controls.update();
 		this.axesWidget.update(this.activeCamera);
 
 		this.renderer.render(this.scene, this.activeCamera);
@@ -212,9 +266,5 @@ export class Preview {
 			this.orthoCamera.bottom = -viewSize;
 			this.orthoCamera.updateProjectionMatrix();
 		}).observe(container);
-	}
-
-	updateParameters(parameters: ScadParameter[]) {
-		this.parameterControls.update(parameters);
 	}
 }

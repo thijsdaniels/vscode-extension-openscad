@@ -1,17 +1,40 @@
+import {
+	provideVSCodeDesignSystem,
+	vsCodeCheckbox,
+	vsCodeTextField,
+} from "@vscode/webview-ui-toolkit";
+import { ParameterControls } from "./ParameterControls";
 import { Preview } from "./Preview";
 
 const vscode = acquireVsCodeApi();
+
+provideVSCodeDesignSystem().register(vsCodeCheckbox(), vsCodeTextField());
+
 let preview: Preview;
+let parameterControls: ParameterControls;
 
 window.addEventListener("load", () => {
-	const container = document.getElementById("preview");
+	const previewContainer = document.getElementById("preview");
+	const parametersContainer = document.getElementById("parameters");
 
-	if (!container) {
+	if (!previewContainer || !parametersContainer) {
+		reportError("Required containers not found");
 		return;
 	}
 
-	preview = new Preview(container);
-	preview.animate();
+	preview = new Preview(previewContainer);
+
+	parameterControls = new ParameterControls(
+		parametersContainer,
+		(name, value) => {
+			vscode.postMessage({
+				type: "parameterChanged",
+				name,
+				value,
+			});
+		}
+	);
+
 	vscode.postMessage({ type: "ready" });
 });
 
@@ -31,7 +54,7 @@ window.addEventListener("message", (event) => {
 				reportError("No parameters in update message");
 				return;
 			}
-			preview.updateParameters(message.parameters);
+			parameterControls.update(message.parameters);
 			break;
 	}
 });

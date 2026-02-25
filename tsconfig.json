@@ -11,8 +11,6 @@
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true
 	},
-	"include": [
-		"src/**/*"
-	],
+	"include": ["src/**/*"],
 	"exclude": ["node_modules", ".vscode-test"]
 }

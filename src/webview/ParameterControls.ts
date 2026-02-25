@@ -39,7 +39,7 @@ export class ParameterControls {
 				paramDiv.className = "parameter";
 
 				const label = document.createElement("label");
-				label.textContent = param.name;
+				label.textContent = this.formatParameterName(param.name, groupName);
 				paramDiv.appendChild(label);
 
 				const input = this.createInput(param);
@@ -51,37 +51,66 @@ export class ParameterControls {
 		});
 	}
 
-	private createInput(param: ScadParameter): HTMLInputElement {
-		let input: HTMLInputElement;
+	private formatParameterName(paramName: string, groupName: string): string {
+		const words = paramName
+			.replace(/_/g, " ") // handle snake_case and CONST_CASE
+			.replace(/([A-Z])/g, " $1") // handle camelCase and PascalCase
+			.trim()
+			.replace(/\s+/g, " ") // normalize multiple spaces
+			.split(" ");
 
-		switch (param.type) {
-			case "boolean":
-				input = document.createElement("input");
-				input.type = "checkbox";
-				input.checked = param.value;
-				break;
-			case "number":
-				input = document.createElement("input");
-				input.type = "number";
-				input.value = param.value;
-				break;
-			default:
-				input = document.createElement("input");
-				input.type = "text";
-				input.value = param.value;
+		if (
+			words.length > 1 &&
+			words[0].toLowerCase() === groupName.toLowerCase()
+		) {
+			words.shift();
 		}
 
-		input.addEventListener("change", () => {
-			const value =
-				input.type === "checkbox"
-					? input.checked
-					: input.type === "number"
-					? Number(input.value)
-					: input.value;
+		return words
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+			.join(" ");
+	}
 
-			this.onChange?.(param.name, value);
-		});
+	private createInput(param: ScadParameter): HTMLElement {
+		switch (param.type) {
+			case "boolean": {
+				const input = document.createElement(
+					"vscode-checkbox"
+				) as HTMLInputElement;
 
-		return input;
+				input.checked = param.value;
+				input.addEventListener("change", () => {
+					this.onChange?.(param.name, input.checked);
+				});
+
+				return input;
+			}
+			case "number": {
+				const input = document.createElement(
+					"vscode-text-field"
+				) as HTMLInputElement;
+
+				input.size = 5;
+				input.value = param.value;
+				input.addEventListener("change", () => {
+					this.onChange?.(param.name, parseFloat(input.value));
+				});
+
+				return input;
+			}
+			case "string": {
+				const input = document.createElement(
+					"vscode-text-field"
+				) as HTMLInputElement;
+
+				input.size = 5;
+				input.value = param.value;
+				input.addEventListener("change", () => {
+					this.onChange?.(param.name, input.value);
+				});
+
+				return input;
+			}
+		}
 	}
 }

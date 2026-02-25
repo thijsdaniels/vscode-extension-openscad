@@ -1,13 +1,64 @@
+export enum Surfaces {
+	Off = "off",
+	Grid = "grid",
+	BuildPlate = "buildPlate",
+}
+
+type SettingState = boolean | Surfaces;
+type IconKey<T> = T extends boolean ? "true" | "false" : T;
+
+interface SettingConfig<T extends SettingState> {
+	states: T[];
+	icons: Record<IconKey<T>, string>;
+	defaultState: T;
+}
+
+const settingConfigs: Record<string, SettingConfig<any>> = {
+	surfaces: {
+		states: [Surfaces.Off, Surfaces.Grid, Surfaces.BuildPlate],
+		icons: {
+			[Surfaces.Off]: "grid_off",
+			[Surfaces.Grid]: "grid_on",
+			[Surfaces.BuildPlate]: "square",
+		},
+		defaultState: Surfaces.Grid,
+	},
+	wireframe: {
+		states: [false, true],
+		icons: {
+			false: "globe",
+			true: "language",
+		},
+		defaultState: false,
+	},
+	orthographic: {
+		states: [false, true],
+		icons: {
+			false: "visibility",
+			true: "deployed_code",
+		},
+		defaultState: false,
+	},
+	shadows: {
+		states: [false, true],
+		icons: {
+			false: "circle",
+			true: "ev_shadow",
+		},
+		defaultState: true,
+	},
+};
+
 export class ViewSettings {
-	wireframe = false;
-	orthographic = false;
-	shadows = true;
-	grid = true;
+	surfaces = settingConfigs.surfaces.defaultState;
+	wireframe = settingConfigs.wireframe.defaultState;
+	orthographic = settingConfigs.orthographic.defaultState;
+	shadows = settingConfigs.shadows.defaultState;
 }
 
 export class Toolbar {
 	private settings: ViewSettings;
-	private buttons: Map<string, HTMLButtonElement> = new Map();
+	private segments: Map<string, HTMLButtonElement[]> = new Map();
 
 	constructor(
 		container: HTMLElement,
@@ -18,44 +69,59 @@ export class Toolbar {
 		const toolbar = document.createElement("div");
 		toolbar.className = "toolbar";
 
-		const buttonConfigs: {
-			icon: string;
-			title: string;
-			setting: keyof ViewSettings;
-		}[] = [
-			{ icon: "grid_4x4", title: "Toggle Grid", setting: "grid" },
-			{ icon: "view_in_ar", title: "Toggle Wireframe", setting: "wireframe" },
-			{ icon: "camera", title: "Toggle Orthographic", setting: "orthographic" },
-			{ icon: "brightness_6", title: "Toggle Shadows", setting: "shadows" },
-		];
+		Object.entries(settingConfigs).forEach(([setting, config]) => {
+			const group = document.createElement("div");
+			group.className = "segment-group";
 
-		buttonConfigs.forEach(({ icon, title, setting }) => {
-			const button = this.createButton(icon, title, setting, onSettingChange);
-			toolbar.appendChild(button);
-			this.buttons.set(setting, button);
+			const buttons = this.createSegmentedButton(
+				setting as keyof ViewSettings,
+				config,
+				onSettingChange
+			);
+
+			buttons.forEach((button) => group.appendChild(button));
+			toolbar.appendChild(group);
+			this.segments.set(setting, buttons);
 		});
 
 		container.appendChild(toolbar);
 	}
 
-	private createButton(
-		icon: string,
-		title: string,
+	private createSegmentedButton<T extends SettingState>(
 		setting: keyof ViewSettings,
+		config: SettingConfig<T>,
 		onSettingChange: (setting: keyof ViewSettings) => void
-	) {
-		const button = document.createElement("button");
-		button.className = "toolbar-button";
-		button.innerHTML = `<span class="material-symbols-outlined">${icon}</span>`;
-		button.title = title;
-		button.classList.toggle("active", this.settings[setting]);
+	): HTMLButtonElement[] {
+		const buttons: HTMLButtonElement[] = [];
 
-		button.addEventListener("click", () => {
-			this.settings[setting] = !this.settings[setting];
-			button.classList.toggle("active");
-			onSettingChange(setting);
+		config.states.forEach((state, index) => {
+			const button = document.createElement("button");
+			button.className = "segment-button material-symbols-outlined";
+			if (index === 0) button.classList.add("first");
+			if (index === config.states.length - 1) button.classList.add("last");
+
+			const iconKey = String(state) as IconKey<T>;
+			button.innerHTML = config.icons[iconKey];
+			button.title = `${
+				setting.charAt(0).toUpperCase() + setting.slice(1)
+			}: ${state}`;
+
+			if (this.settings[setting] === state) {
+				button.classList.add("active");
+			}
+
+			button.addEventListener("click", () => {
+				if (this.settings[setting] !== state) {
+					this.settings[setting] = state;
+					buttons.forEach((b) => b.classList.remove("active"));
+					button.classList.add("active");
+					onSettingChange(setting);
+				}
+			});
+
+			buttons.push(button);
 		});
 
-		return button;
+		return buttons;
 	}
 }

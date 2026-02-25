@@ -49,6 +49,12 @@ export class ScadPanel {
 				const base64Data = stlData.toString("base64");
 
 				this.panel.webview.postMessage({
+					type: "loadingState",
+					loading: true,
+					message: "Loading model...",
+				});
+
+				this.panel.webview.postMessage({
 					type: "update",
 					content: base64Data,
 				});
@@ -58,6 +64,13 @@ export class ScadPanel {
 				this.scadParameters.updateDefinitions(parameters);
 				// Update UI with current parameter values
 				this._updateParameters(this.scadParameters.getParameters());
+			},
+			() => {
+				this.panel.webview.postMessage({
+					type: "loadingState",
+					loading: true,
+					message: "Generating model...",
+				});
 			}
 		);
 
@@ -171,24 +184,15 @@ export class ScadPanel {
                         .parameter {
 							display: flex;
 							justify-content: space-between;
-							align-items: baseline;
-							gap: 1rem;
+							align-items: center;
+							gap: 2rem;
                         }
                         .parameter label {
                             display: block;
 							font-family: var(--vscode-editor-font-family);
+							font-size: var(--vscode-editor-font-size);
                             color: var(--vscode-foreground);
-							opacity: 0.75;
                         }
-                        .parameter input {
-                            background: var(--vscode-input-background);
-                            color: var(--vscode-input-foreground);
-                            border: 1px solid var(--vscode-input-border);
-                            padding: 0.25rem;
-                        }
-						.parameter input:not([type="checkbox"]) {
-							width: 4rem;
-						}
 						.toolbar {
 							position: absolute;
 							bottom: 1rem;
@@ -201,7 +205,7 @@ export class ScadPanel {
 							border-radius: 0.5rem;
 							box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 						}
-						.toolbar-button {
+						.icon-button {
 							background: none;
 							border: none;
 							color: var(--vscode-foreground);
@@ -212,24 +216,75 @@ export class ScadPanel {
 							align-items: center;
 							justify-content: center;
 						}
-						.toolbar-button:hover {
+						.icon-button:hover {
 							background: var(--vscode-toolbar-hoverBackground);
 						}
-						.toolbar-button.active {
+						.icon-button.active {
 							background: var(--vscode-toolbar-activeBackground);
 							color: var(--vscode-toolbar-activeForeground);
 						}
 						.material-symbols-outlined {
-							font-variation-settings:
-								'FILL' 0,
-								'wght' 400,
-								'GRAD' 0,
-								'opsz' 24
+							font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+							font-size: inherit;
+						}
+						.segment-group {
+							display: flex;
+							margin: 0 4px;
+						}
+						.segment-button {
+							border: 1px solid var(--vscode-input-border);
+							border-right: none;
+							background: transparent;
+							color: #888;
+							padding: 4px 8px;
+							font-size: 1rem;
+						}
+						.segment-button:hover {
+							background: var(--vscode-toolbar-hoverBackground);
+						}
+						.segment-button.active {
+							background: var(--vscode-toolbar-activeBackground);
+							color: var(--vscode-toolbar-activeForeground);
+						}
+						.segment-button.first {
+							border-radius: 4px 0 0 4px;
+						}
+						.segment-button.last {
+							border-radius: 0 4px 4px 0;
+							border-right: 1px solid var(--vscode-input-border);
+							}
+						#loading-overlay {
+							display: none;
+							position: absolute;
+							top: 0;
+							left: 0;
+							right: 0;
+							bottom: 0;
+							background: rgba(0, 0, 0, 0.25);
+							align-items: center;
+							justify-content: center;
+							flex-direction: column;
+							z-index: 1;
+							pointer-events: none;
+						}
+						.spinner {
+							width: 40px;
+							height: 40px;
+							border: 4px solid rgba(255, 255, 255, 0.3);
+							border-radius: 50%;
+							border-top-color: white;
+							animation: spin 1s linear infinite;
+						}
+						@keyframes spin {
+							to { transform: rotate(360deg); }
 						}
 					</style>
 				</head>
 				<body>
 					<div id="preview">
+						<div id="loading-overlay">
+							<div class="spinner"></div>
+						</div>
 						<!-- Preview will be inserted here -->
 					</div>
 					<div id="parameters">

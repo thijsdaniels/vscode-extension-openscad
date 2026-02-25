@@ -8,15 +8,18 @@ export class ScadWatcher {
 	private watcher: FSWatcher;
 	private onChangeCallback: (stlData: Buffer) => void;
 	private onParametersCallback?: (parameters: ScadParameter[]) => void;
+	private onRenderStartCallback?: () => void;
 	private logger: vscode.OutputChannel;
 	private currentScadPath?: string;
 
 	constructor(
 		onChangeCallback: (stlData: Buffer) => void,
-		onParametersCallback?: (parameters: ScadParameter[]) => void
+		onParametersCallback?: (parameters: ScadParameter[]) => void,
+		onRenderStartCallback?: () => void
 	) {
 		this.onChangeCallback = onChangeCallback;
 		this.onParametersCallback = onParametersCallback;
+		this.onRenderStartCallback = onRenderStartCallback;
 		this.logger = vscode.window.createOutputChannel("OpenSCAD Preview");
 		this.watcher = watch("", {
 			persistent: true,
@@ -32,6 +35,11 @@ export class ScadWatcher {
 		const handleFileChange = async (path: string) => {
 			if (path === scadPath) {
 				try {
+					if (this.onRenderStartCallback) {
+						this.onRenderStartCallback();
+					}
+					// Notify that we're starting to process
+					this.onChangeCallback(Buffer.from("loading"));
 					// Get parameters first
 					const newParams = await this.getParameters(scadPath);
 					if (this.onParametersCallback) {
@@ -133,12 +141,14 @@ export class ScadWatcher {
 
 	renderWithParameters(paramArgs: string[]) {
 		if (!this.currentScadPath) return;
-
+		if (this.onRenderStartCallback) {
+			this.onRenderStartCallback();
+		}
 		this.renderStl(this.currentScadPath, paramArgs);
 	}
 
 	private renderStl(scadPath: string, paramArgs: string[] = []) {
-		const options = [
+		const process = spawn("openscad", [
 			"--export-format",
 			"stl",
 			"-o",
@@ -146,9 +156,7 @@ export class ScadWatcher {
 			"-q",
 			...paramArgs,
 			scadPath,
-		];
-		const process = spawn("openscad", options);
-		console.log("openscad", options);
+		]);
 
 		const chunks: Buffer[] = [];
 

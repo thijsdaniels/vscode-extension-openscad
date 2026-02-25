@@ -2,7 +2,8 @@ const { build, context } = require("esbuild");
 
 const commonConfig = {
 	logLevel: "info",
-	sourcemap: true,
+	minify: process.env.NODE_ENV === "production",
+	sourcemap: process.env.NODE_ENV !== "production",
 };
 
 /** @type {import('esbuild').BuildOptions} */
@@ -24,6 +25,9 @@ const webviewConfig = {
 	outfile: "dist/webview.js",
 	platform: "browser",
 	format: "esm",
+	loader: {
+		".stl": "binary",
+	},
 };
 
 const watch = process.argv.includes("--watch");

@@ -2,14 +2,16 @@
 	"name": "vscode-extension-openscad",
 	"version": "0.1.0",
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "node esbuild.js",
-		"watch": "node esbuild.js --watch",
+		"vscode:prepublish": "npm run package",
+		"compile": "node ./esbuild.js",
+		"package": "NODE_ENV=production node ./esbuild.js",
+		"watch": "npm run compile -- --watch",
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
 		"test": "node ./dist/test/runTest.js"
 	},
 	"dependencies": {
+		"@vscode/webview-ui-toolkit": "^1.4.0",
 		"chokidar": "^3.5.3",
 		"three": "^0.154.0"
 	},
