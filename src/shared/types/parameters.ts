@@ -3,5 +3,5 @@ export interface ScadParameter {
 	type: "number" | "boolean" | "string";
 	group?: string;
 	value: any;
-	default?: any;
+	default: string;
 }

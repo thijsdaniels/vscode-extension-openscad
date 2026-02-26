@@ -3,7 +3,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { AxesWidget } from "./AxesWidget";
 import { Surfaces, Toolbar, ViewSettings } from "./Toolbar";
-import buildPlate from "./buildPlate.stl";
+import buildPlate from "../assets/models/buildPlate.stl";
 
 export class Preview {
 	private scene!: THREE.Scene;
@@ -39,7 +39,7 @@ export class Preview {
 		this.toolbar = new Toolbar(
 			container,
 			this.settings,
-			this.handleSettingChange.bind(this)
+			this.handleSettingChange.bind(this),
 		);
 
 		this.loadingOverlay = container.querySelector("#loading-overlay")!;
@@ -75,7 +75,7 @@ export class Preview {
 			75,
 			width / height,
 			0.1,
-			10000
+			10000,
 		);
 		this.perspectiveCamera.position.y = 100;
 		this.perspectiveCamera.position.z = 200;
@@ -90,7 +90,7 @@ export class Preview {
 			viewSize,
 			-viewSize,
 			0.1,
-			10000
+			10000,
 		);
 
 		// Initial sync
@@ -98,7 +98,7 @@ export class Preview {
 
 		this.controls = new OrbitControls(
 			this.perspectiveCamera,
-			this.renderer.domElement
+			this.renderer.domElement,
 		);
 		this.controls.zoomSpeed = 0.5;
 		this.controls.addEventListener("change", () => this.syncCameras());
@@ -144,7 +144,7 @@ export class Preview {
 
 	private initBuildPlate() {
 		const loader = new STLLoader();
-		const geometry = loader.parse(buildPlate.buffer);
+		const geometry = loader.parse(buildPlate.buffer as ArrayBuffer);
 		geometry.rotateX(-Math.PI / 2);
 
 		const material = new THREE.MeshStandardMaterial({

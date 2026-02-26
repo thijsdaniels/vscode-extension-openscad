@@ -4,8 +4,8 @@ import {
 	vsCodeTextField,
 	vsCodeButton,
 } from "@vscode/webview-ui-toolkit";
-import { ParameterControls } from "./ParameterControls";
-import { Preview } from "./preview";
+import { ParameterControls } from "./components/ParameterControls";
+import { Preview } from "./components/Preview";
 
 const vscode = acquireVsCodeApi();
 
@@ -50,8 +50,10 @@ window.addEventListener("load", () => {
 	vscode.postMessage({ type: "ready" });
 });
 
+import { ExtensionToWebviewMessage } from "../shared/types/messages";
+
 window.addEventListener("message", (event) => {
-	const message = event.data;
+	const message = event.data as ExtensionToWebviewMessage;
 
 	switch (message.type) {
 		case "update":
