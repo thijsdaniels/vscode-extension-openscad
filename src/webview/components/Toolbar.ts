@@ -4,6 +4,12 @@ export enum Surfaces {
 	BuildPlate = "buildPlate",
 }
 
+export enum RenderMode {
+	Solid = "solid",
+	Wireframe = "wireframe",
+	XRay = "xray",
+}
+
 type SettingState = boolean | Surfaces;
 type IconKey<T> = T extends boolean ? "true" | "false" : T;
 
@@ -23,13 +29,14 @@ const settingConfigs: Record<string, SettingConfig<any>> = {
 		},
 		defaultState: Surfaces.Grid,
 	},
-	wireframe: {
-		states: [false, true],
+	renderMode: {
+		states: [RenderMode.Solid, RenderMode.XRay, RenderMode.Wireframe],
 		icons: {
-			false: "globe",
-			true: "language",
+			[RenderMode.Solid]: "texture",
+			[RenderMode.XRay]: "opacity",
+			[RenderMode.Wireframe]: "language",
 		},
-		defaultState: false,
+		defaultState: RenderMode.Solid,
 	},
 	orthographic: {
 		states: [false, true],
@@ -51,7 +58,7 @@ const settingConfigs: Record<string, SettingConfig<any>> = {
 
 export class ViewSettings {
 	surfaces = settingConfigs.surfaces.defaultState;
-	wireframe = settingConfigs.wireframe.defaultState;
+	renderMode = settingConfigs.renderMode.defaultState;
 	orthographic = settingConfigs.orthographic.defaultState;
 	shadows = settingConfigs.shadows.defaultState;
 }

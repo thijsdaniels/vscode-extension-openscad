@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { AxesWidget } from "./AxesWidget";
-import { Surfaces, Toolbar, ViewSettings } from "./Toolbar";
+import { RenderMode, Surfaces, Toolbar, ViewSettings } from "./Toolbar";
 import buildPlate from "../assets/models/buildPlate.stl";
 
 export class Preview {
@@ -180,8 +180,14 @@ export class Preview {
 				this.buildPlateGrid.visible =
 					this.settings.surfaces === Surfaces.BuildPlate;
 				break;
-			case "wireframe":
-				this.mesh.material.wireframe = this.settings.wireframe;
+			case "renderMode":
+				this.mesh.material.wireframe =
+					this.settings.renderMode === RenderMode.Wireframe;
+				this.mesh.material.transparent =
+					this.settings.renderMode === RenderMode.XRay;
+				this.mesh.material.opacity =
+					this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
+				this.mesh.material.needsUpdate = true;
 				break;
 			case "orthographic":
 				this.activeCamera = this.settings.orthographic
@@ -207,7 +213,12 @@ export class Preview {
 
 		this.mesh.castShadow = true;
 		this.mesh.receiveShadow = true;
-		this.mesh.material.wireframe = this.settings.wireframe;
+		this.mesh.material.wireframe =
+			this.settings.renderMode === RenderMode.Wireframe;
+		this.mesh.material.transparent =
+			this.settings.renderMode === RenderMode.XRay;
+		this.mesh.material.opacity =
+			this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
 		this.mesh.castShadow = this.settings.shadows;
 		this.mesh.receiveShadow = this.settings.shadows;
 
