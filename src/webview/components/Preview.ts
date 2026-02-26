@@ -36,8 +36,10 @@ export class Preview {
 
 		this.axesWidget = new AxesWidget(container);
 
+		const toolbarMount =
+			document.getElementById("toolbar-groups-mount") || container;
 		this.toolbar = new Toolbar(
-			container,
+			toolbarMount,
 			this.settings,
 			this.handleSettingChange.bind(this),
 		);

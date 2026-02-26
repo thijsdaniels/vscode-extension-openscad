@@ -1,6 +1,12 @@
 {
 	"name": "vscode-extension-openscad",
 	"version": "0.1.0",
+	"author": "Thijs Daniels",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/thijsdaniels/vscode-extension-openscad.git"
+	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",
 		"compile": "node ./esbuild.js",

@@ -47,6 +47,21 @@ window.addEventListener("load", () => {
 		});
 	}
 
+	const toggleParametersBtn = document.getElementById("toggle-parameters");
+	const parametersPanel = document.getElementById("parameters-panel");
+	if (toggleParametersBtn && parametersPanel) {
+		toggleParametersBtn.classList.add("active");
+		toggleParametersBtn.addEventListener("click", () => {
+			if (parametersPanel.style.display === "none") {
+				parametersPanel.style.display = "flex";
+				toggleParametersBtn.classList.add("active");
+			} else {
+				parametersPanel.style.display = "none";
+				toggleParametersBtn.classList.remove("active");
+			}
+		});
+	}
+
 	vscode.postMessage({ type: "ready" });
 });
 

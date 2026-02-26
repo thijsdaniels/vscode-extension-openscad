@@ -63,11 +63,11 @@ export class Toolbar {
 	constructor(
 		container: HTMLElement,
 		settings: ViewSettings,
-		onSettingChange: (setting: keyof ViewSettings) => void
+		onSettingChange: (setting: keyof ViewSettings) => void,
 	) {
 		this.settings = settings;
 		const toolbar = document.createElement("div");
-		toolbar.className = "toolbar";
+		toolbar.className = "toolbar-groups";
 
 		Object.entries(settingConfigs).forEach(([setting, config]) => {
 			const group = document.createElement("div");
@@ -76,7 +76,7 @@ export class Toolbar {
 			const buttons = this.createSegmentedButton(
 				setting as keyof ViewSettings,
 				config,
-				onSettingChange
+				onSettingChange,
 			);
 
 			buttons.forEach((button) => group.appendChild(button));
@@ -90,7 +90,7 @@ export class Toolbar {
 	private createSegmentedButton<T extends SettingState>(
 		setting: keyof ViewSettings,
 		config: SettingConfig<T>,
-		onSettingChange: (setting: keyof ViewSettings) => void
+		onSettingChange: (setting: keyof ViewSettings) => void,
 	): HTMLButtonElement[] {
 		const buttons: HTMLButtonElement[] = [];
 

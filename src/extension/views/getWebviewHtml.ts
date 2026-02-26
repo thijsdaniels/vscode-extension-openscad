@@ -23,22 +23,33 @@ export function getWebviewHtml(
 						padding: 0;
 						height: 100vh;
 						display: flex;
+						flex-direction: column;
+						overflow: hidden;
+					}
+					#content-container {
+						display: flex;
+						flex-direction: row;
+						flex-grow: 1;
+						min-height: 0;
 					}
 					#preview {
 						position: relative;
 						flex-grow: 1;
-						height: 100vh;
+						min-width: 0;
+						min-height: 0;
+						overflow: hidden;
 					}
 					canvas { 
 						width: 100%;
 						height: 100%;
 					}
 					#parameters-panel {
-						background: var(--vscode-editor-background);
+						background: var(--vscode-panel-background);
 						border-left: 1px solid var(--vscode-panel-border);
 						display: flex;
 						flex-direction: column;
 						width: 300px;
+						height: 100%;
 					}
 					#parameters {
 						padding: 1rem;
@@ -73,17 +84,19 @@ export function getWebviewHtml(
 						font-size: var(--vscode-editor-font-size);
 						color: var(--vscode-foreground);
 					}
-					.toolbar {
-						position: absolute;
-						bottom: 1rem;
-						left: 50%;
-						transform: translateX(-50%);
+					#toolbar-container {
+						display: flex;
+						justify-content: space-between;
+						align-items: center;
+						background: var(--vscode-panel-background);
+						padding: 0.25rem;
+						border-bottom: 1px solid var(--vscode-panel-border);
+					}
+					.toolbar-groups {
 						display: flex;
 						gap: 0.5rem;
-						background: var(--vscode-editor-background);
-						padding: 0.5rem;
-						border-radius: 0.5rem;
-						box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+						flex-grow: 1;
+						justify-content: center;
 					}
 					.icon-button {
 						background: none;
@@ -161,18 +174,26 @@ export function getWebviewHtml(
 				</style>
 			</head>
 			<body>
-				<div id="preview">
-					<div id="loading-overlay">
-						<div class="spinner"></div>
-					</div>
-					<!-- Preview will be inserted here -->
+				<div id="toolbar-container">
+					<div id="toolbar-groups-mount"></div>
+					<button id="toggle-parameters" class="icon-button material-symbols-outlined active" title="Toggle Parameters">
+						view_sidebar
+					</button>
 				</div>
-				<div id="parameters-panel">
-					<div id="parameters">
-						<!-- Parameter controls will be dynamically inserted here -->
+				<div id="content-container">
+					<div id="preview">
+						<div id="loading-overlay">
+							<div class="spinner"></div>
+						</div>
+						<!-- Preview will be inserted here -->
 					</div>
-					<div id="export-container">
-						<vscode-button id="export-button" style="width: 100%">Export STL</vscode-button>
+					<div id="parameters-panel">
+						<div id="parameters">
+							<!-- Parameter controls will be dynamically inserted here -->
+						</div>
+						<div id="export-container">
+							<vscode-button id="export-button" style="width: 100%">Export STL</vscode-button>
+						</div>
 					</div>
 				</div>
 				<script src="${scriptUri}" type="module"></script>
