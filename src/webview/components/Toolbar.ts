@@ -20,6 +20,14 @@ interface SettingConfig<T extends SettingState> {
 }
 
 const settingConfigs: Record<string, SettingConfig<any>> = {
+	orthographic: {
+		states: [false, true],
+		icons: {
+			false: "visibility",
+			true: "deployed_code",
+		},
+		defaultState: false,
+	},
 	surfaces: {
 		states: [Surfaces.Off, Surfaces.Grid, Surfaces.BuildPlate],
 		icons: {
@@ -38,13 +46,13 @@ const settingConfigs: Record<string, SettingConfig<any>> = {
 		},
 		defaultState: RenderMode.Solid,
 	},
-	orthographic: {
-		states: [false, true],
+	colors: {
+		states: [true, false],
 		icons: {
-			false: "visibility",
-			true: "deployed_code",
+			true: "palette",
+			false: "format_color_reset",
 		},
-		defaultState: false,
+		defaultState: true,
 	},
 	shadows: {
 		states: [false, true],
@@ -61,6 +69,7 @@ export class ViewSettings {
 	renderMode = settingConfigs.renderMode.defaultState;
 	orthographic = settingConfigs.orthographic.defaultState;
 	shadows = settingConfigs.shadows.defaultState;
+	colors = settingConfigs.colors.defaultState;
 }
 
 export class Toolbar {

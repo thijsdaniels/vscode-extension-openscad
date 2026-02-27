@@ -219,6 +219,13 @@ export class Preview {
 					}
 				});
 				break;
+			case "colors":
+				this.modelGroup.traverse((child) => {
+					if (child instanceof Mesh) {
+						this.applyMaterialSettings(child);
+					}
+				});
+				break;
 		}
 	}
 
@@ -234,6 +241,29 @@ export class Preview {
 				(mat as any).transparent = this.settings.renderMode === RenderMode.XRay;
 				(mat as any).opacity =
 					this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
+
+				if (!this.settings.colors) {
+					if (mat.userData.originalColor === undefined && (mat as any).color) {
+						mat.userData.originalColor = (mat as any).color.clone();
+						mat.userData.originalVertexColors = (mat as any).vertexColors;
+					}
+					if ((mat as any).color) {
+						(mat as any).color.setHex(0xffffff);
+					}
+					if ("vertexColors" in mat) {
+						(mat as any).vertexColors = false;
+					}
+				} else {
+					if (mat.userData.originalColor !== undefined) {
+						if ((mat as any).color) {
+							(mat as any).color.copy(mat.userData.originalColor);
+						}
+						if ("vertexColors" in mat) {
+							(mat as any).vertexColors = mat.userData.originalVertexColors;
+						}
+					}
+				}
+
 				(mat as any).needsUpdate = true;
 			}
 		});
