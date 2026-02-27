@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import { OutputChannel, Uri } from "vscode";
 import { OpenScadCli } from "../services/OpenScadCli";
 import { ScadParser } from "../services/ScadParser";
 import { OpenScadSession } from "./OpenScadSession";
@@ -14,13 +14,13 @@ export class OpenScadSessionManager {
 	constructor(
 		private cli: OpenScadCli,
 		private parser: ScadParser,
-		private logger: vscode.OutputChannel,
+		private logger: OutputChannel,
 	) {}
 
 	/**
 	 * Gets an existing session for a URI or creates a new one if it doesn't exist.
 	 */
-	public getOrCreateSession(documentUri: vscode.Uri): OpenScadSession {
+	public getOrCreateSession(documentUri: Uri): OpenScadSession {
 		const key = documentUri.toString();
 		let session = this.sessions.get(key);
 
@@ -41,7 +41,7 @@ export class OpenScadSessionManager {
 	/**
 	 * Disposes a completely closed session.
 	 */
-	public removeSession(documentUri: vscode.Uri) {
+	public removeSession(documentUri: Uri) {
 		const key = documentUri.toString();
 		const session = this.sessions.get(key);
 		if (session) {

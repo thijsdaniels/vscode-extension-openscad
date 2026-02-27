@@ -1,4 +1,11 @@
-import * as vscode from "vscode";
+import {
+	Disposable,
+	ProgressLocation,
+	Uri,
+	WebviewPanel,
+	window,
+	workspace,
+} from "vscode";
 import {
 	ExtensionToWebviewMessage,
 	WebviewToExtensionMessage,
@@ -7,13 +14,13 @@ import { OpenScadSession } from "../core/OpenScadSession";
 import { getWebviewHtml } from "./getWebviewHtml";
 
 export class ScadPreviewPanel {
-	private readonly panel: vscode.WebviewPanel;
-	private disposables: vscode.Disposable[] = [];
+	private readonly panel: WebviewPanel;
+	private disposables: Disposable[] = [];
 	private isWebviewReady: boolean = false;
 
 	constructor(
-		panel: vscode.WebviewPanel,
-		private readonly extensionUri: vscode.Uri,
+		panel: WebviewPanel,
+		private readonly extensionUri: Uri,
 		private readonly session: OpenScadSession,
 	) {
 		this.panel = panel;
@@ -22,9 +29,9 @@ export class ScadPreviewPanel {
 		this.panel.webview.options = {
 			enableScripts: true,
 			localResourceRoots: [
-				vscode.Uri.joinPath(extensionUri, "dist"),
-				vscode.Uri.joinPath(extensionUri, "node_modules", "three"),
-				vscode.Uri.joinPath(extensionUri, "src", "webview"),
+				Uri.joinPath(extensionUri, "dist"),
+				Uri.joinPath(extensionUri, "node_modules", "three"),
+				Uri.joinPath(extensionUri, "src", "webview"),
 			],
 		};
 
@@ -46,7 +53,7 @@ export class ScadPreviewPanel {
 						this.exportModel();
 						return;
 					case "error":
-						vscode.window.showErrorMessage(`Preview Error: ${message.message}`);
+						window.showErrorMessage(`Preview Error: ${message.message}`);
 						return;
 				}
 			},
@@ -128,7 +135,7 @@ export class ScadPreviewPanel {
 	}
 
 	private async exportModel() {
-		const format = await vscode.window.showQuickPick(["3mf", "stl"], {
+		const format = await window.showQuickPick(["3mf", "stl"], {
 			title: "Select Export Format",
 			placeHolder:
 				"Choose 3D model format to export (3MF for colors, STL for geometry)",
@@ -138,7 +145,7 @@ export class ScadPreviewPanel {
 			return; // User cancelled
 		}
 
-		const defaultUri = vscode.Uri.file(
+		const defaultUri = Uri.file(
 			this.session.documentUri.fsPath.replace(/\.scad$/i, `.${format}`),
 		);
 
@@ -149,7 +156,7 @@ export class ScadPreviewPanel {
 			filters["STL Files"] = ["stl"];
 		}
 
-		const uri = await vscode.window.showSaveDialog({
+		const uri = await window.showSaveDialog({
 			defaultUri,
 			filters,
 			title: `Export ${format.toUpperCase()}`,
@@ -158,9 +165,9 @@ export class ScadPreviewPanel {
 		if (uri) {
 			try {
 				// We display a localized progress UI so the user knows an on-demand background render is happening
-				await vscode.window.withProgress(
+				await window.withProgress(
 					{
-						location: vscode.ProgressLocation.Notification,
+						location: ProgressLocation.Notification,
 						title: `Rendering ${format.toUpperCase()}...`,
 						cancellable: false,
 					},
@@ -168,15 +175,15 @@ export class ScadPreviewPanel {
 						const buffer = await this.session.exportFormat(
 							format as "3mf" | "stl",
 						);
-						await vscode.workspace.fs.writeFile(uri, new Uint8Array(buffer));
+						await workspace.fs.writeFile(uri, new Uint8Array(buffer));
 					},
 				);
 
-				vscode.window.showInformationMessage(
+				window.showInformationMessage(
 					`Successfully exported ${format.toUpperCase()} to ${uri.fsPath}`,
 				);
 			} catch (error) {
-				vscode.window.showErrorMessage(
+				window.showErrorMessage(
 					`Failed to export ${format.toUpperCase()}: ${error}`,
 				);
 			}

@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import { ExtensionContext, window } from "vscode";
 import { registerShowPanelCommand } from "./commands/showPanel";
 import { OpenScadSessionManager } from "./core/OpenScadSessionManager";
 import { OpenScadCli } from "./services/OpenScadCli";
@@ -6,9 +6,9 @@ import { ScadParser } from "./services/ScadParser";
 
 let sessionManager: OpenScadSessionManager | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: ExtensionContext) {
 	// 1. Initialize global utilities (Dependency Injection roots)
-	const logger = vscode.window.createOutputChannel("OpenSCAD Preview");
+	const logger = window.createOutputChannel("OpenSCAD Preview");
 	context.subscriptions.push(logger);
 
 	// 2. Instantiate global services

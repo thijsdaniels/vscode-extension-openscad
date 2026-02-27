@@ -1,9 +1,9 @@
 import { readFile } from "fs/promises";
-import * as vscode from "vscode";
+import { OutputChannel } from "vscode";
 import { ScadParameter } from "../../shared/types/parameters";
 
 export class ScadParser {
-	constructor(private logger: vscode.OutputChannel) {}
+	constructor(private logger: OutputChannel) {}
 
 	public async extractParameters(scadPath: string): Promise<ScadParameter[]> {
 		try {

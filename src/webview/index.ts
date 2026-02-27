@@ -1,8 +1,8 @@
 import {
 	provideVSCodeDesignSystem,
+	vsCodeButton,
 	vsCodeCheckbox,
 	vsCodeTextField,
-	vsCodeButton,
 } from "@vscode/webview-ui-toolkit";
 import { ParameterControls } from "./components/ParameterControls";
 import { Preview } from "./components/Preview";

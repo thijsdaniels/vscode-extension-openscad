@@ -1,14 +1,13 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import * as vscode from "vscode";
-import * as os from "os";
-import * as path from "path";
-import * as fs from "fs/promises";
-import * as crypto from "crypto";
+import { readFile, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+import { OutputChannel } from "vscode";
 
 export class OpenScadCli {
 	private activeProcesses = new Map<string, ChildProcessWithoutNullStreams>();
 
-	constructor(private logger: vscode.OutputChannel) {}
+	constructor(private logger: OutputChannel) {}
 
 	public async render(
 		scadPath: string,
@@ -25,20 +24,20 @@ export class OpenScadCli {
 		}
 
 		return new Promise((resolve, reject) => {
-			const tmpFile = path.join(
-				os.tmpdir(),
+			const tmpFile = join(
+				tmpdir(),
 				`openscad-render-${crypto.randomUUID()}.${format}`,
 			);
 
-			const spawnArgs = ["--export-format", format];
-
-			if (format === "3mf") {
-				spawnArgs.push("-O", "export-3mf/material-type=color");
-			}
-
-			spawnArgs.push("-o", tmpFile, "-q", ...parameters, scadPath);
-
-			const process = spawn("openscad", spawnArgs);
+			const process = spawn("openscad", [
+				"--export-format",
+				format,
+				"-o",
+				tmpFile,
+				"-q",
+				...parameters,
+				scadPath,
+			]);
 
 			this.activeProcesses.set(scadPath, process);
 
@@ -63,14 +62,14 @@ export class OpenScadCli {
 				}
 
 				try {
-					const buffer = await fs.readFile(tmpFile);
+					const buffer = await readFile(tmpFile);
 					resolve(buffer);
 				} catch (err) {
 					reject(new Error(`Failed to read temporary 3MF file: ${err}`));
 				} finally {
 					// Clean up the temp file
 					try {
-						await fs.unlink(tmpFile);
+						await unlink(tmpFile);
 					} catch (e) {
 						// Ignore cleanup failure
 					}

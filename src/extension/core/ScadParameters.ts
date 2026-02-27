@@ -1,4 +1,4 @@
-import { ScadParameter } from "../ScadParameter";
+import { ScadParameter } from "../../shared/types/parameters";
 
 export class ScadParameters {
 	private parameters: Map<string, ScadParameter> = new Map();

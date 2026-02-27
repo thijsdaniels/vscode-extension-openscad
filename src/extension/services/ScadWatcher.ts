@@ -1,5 +1,5 @@
 import { FSWatcher, watch } from "chokidar";
-import * as vscode from "vscode";
+import { OutputChannel, workspace } from "vscode";
 import { ScadParameter } from "../../shared/types/parameters";
 import { OpenScadCli } from "./OpenScadCli";
 import { ScadParser } from "./ScadParser";
@@ -11,7 +11,7 @@ export class ScadWatcher {
 	constructor(
 		private cli: OpenScadCli,
 		private parser: ScadParser,
-		private logger: vscode.OutputChannel,
+		private logger: OutputChannel,
 		private onChangeCallback: (data: {
 			buffer: Buffer;
 			format: "3mf" | "stl";
@@ -75,7 +75,7 @@ export class ScadWatcher {
 
 	private async renderPreview(scadPath: string, paramArgs: string[] = []) {
 		try {
-			const format = vscode.workspace
+			const format = workspace
 				.getConfiguration("openscad")
 				.get<"3mf" | "stl">("previewFormat", "3mf");
 

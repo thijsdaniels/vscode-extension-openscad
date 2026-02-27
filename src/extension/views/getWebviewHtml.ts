@@ -1,12 +1,9 @@
-import * as vscode from "vscode";
+import { Uri, Webview } from "vscode";
 
-export function getWebviewHtml(
-	webview: vscode.Webview,
-	extensionUri: vscode.Uri,
-): string {
+export function getWebviewHtml(webview: Webview, extensionUri: Uri): string {
 	// Get path to compiled preview script
 	const scriptUri = webview.asWebviewUri(
-		vscode.Uri.joinPath(extensionUri, "dist", "webview.js"),
+		Uri.joinPath(extensionUri, "dist", "webview.js"),
 	);
 
 	return /* html */ `

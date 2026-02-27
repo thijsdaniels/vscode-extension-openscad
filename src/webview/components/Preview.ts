@@ -1,4 +1,21 @@
-import * as THREE from "three";
+import {
+	AmbientLight,
+	Clock,
+	Color,
+	DirectionalLight,
+	FogExp2,
+	GridHelper,
+	Group,
+	Mesh,
+	MeshStandardMaterial,
+	OrthographicCamera,
+	PerspectiveCamera,
+	PointLight,
+	Scene,
+	SphereGeometry,
+	SpotLight,
+	WebGLRenderer,
+} from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
@@ -7,28 +24,28 @@ import { AxesWidget } from "./AxesWidget";
 import { RenderMode, Surfaces, Toolbar, ViewSettings } from "./Toolbar";
 
 export class Preview {
-	private scene!: THREE.Scene;
-	private activeCamera!: THREE.PerspectiveCamera | THREE.OrthographicCamera;
-	private perspectiveCamera!: THREE.PerspectiveCamera;
-	private orthoCamera!: THREE.OrthographicCamera;
-	private renderer!: THREE.WebGLRenderer;
+	private scene!: Scene;
+	private activeCamera!: PerspectiveCamera | OrthographicCamera;
+	private perspectiveCamera!: PerspectiveCamera;
+	private orthoCamera!: OrthographicCamera;
+	private renderer!: WebGLRenderer;
 	private controls!: OrbitControls;
-	private modelGroup!: THREE.Group;
-	private gridHelper!: THREE.GridHelper;
+	private modelGroup!: Group;
+	private gridHelper!: GridHelper;
 	private settings: ViewSettings;
 	private axesWidget!: AxesWidget;
 	private toolbar!: Toolbar;
-	private clock: THREE.Clock;
-	private buildPlateMesh!: THREE.Mesh;
-	private buildPlateGrid!: THREE.GridHelper;
+	private clock: Clock;
+	private buildPlateMesh!: Mesh;
+	private buildPlateGrid!: GridHelper;
 	private loadingOverlay: HTMLElement;
-	private loadingGeometry = new THREE.SphereGeometry(20, 32, 32);
+	private loadingGeometry = new SphereGeometry(20, 32, 32);
 	private isLoading: boolean = true;
 
 	constructor(container: HTMLElement) {
 		this.settings = new ViewSettings();
-		this.scene = new THREE.Scene();
-		this.clock = new THREE.Clock();
+		this.scene = new Scene();
+		this.clock = new Clock();
 
 		this.loadingOverlay = container.querySelector("#loading-overlay")!;
 
@@ -65,7 +82,7 @@ export class Preview {
 	}
 
 	private initRenderer(container: HTMLElement, width: number, height: number) {
-		this.renderer = new THREE.WebGLRenderer({
+		this.renderer = new WebGLRenderer({
 			antialias: true,
 		});
 		this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -74,7 +91,7 @@ export class Preview {
 	}
 
 	private initCameras(width: number, height: number) {
-		this.perspectiveCamera = new THREE.PerspectiveCamera(
+		this.perspectiveCamera = new PerspectiveCamera(
 			75,
 			width / height,
 			0.1,
@@ -87,7 +104,7 @@ export class Preview {
 
 		const aspect = width / height;
 		const viewSize = 100;
-		this.orthoCamera = new THREE.OrthographicCamera(
+		this.orthoCamera = new OrthographicCamera(
 			-viewSize * aspect,
 			viewSize * aspect,
 			viewSize,
@@ -114,27 +131,27 @@ export class Preview {
 	}
 
 	private initScene() {
-		this.scene.background = new THREE.Color(0x2c2a2e);
-		this.scene.fog = new THREE.FogExp2(0x2c2a2e, 0.001);
+		this.scene.background = new Color(0x2c2a2e);
+		this.scene.fog = new FogExp2(0x2c2a2e, 0.001);
 
-		this.scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+		this.scene.add(new AmbientLight(0xffffff, 0.25));
 
-		const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+		const directionalLight = new DirectionalLight(0xffffff, 0.5);
 		directionalLight.position.set(100, 200, 50);
 		directionalLight.castShadow = true;
 		directionalLight.target.position.set(0, 0, 0);
 		this.scene.add(directionalLight);
 
-		const spotLight = new THREE.SpotLight(0xffffff, 0.5, 0, 0.15, 1, 0);
+		const spotLight = new SpotLight(0xffffff, 0.5, 0, 0.15, 1, 0);
 		spotLight.position.set(200, 200, 200);
 		spotLight.castShadow = true;
 		this.scene.add(spotLight);
 
-		const pointLight = new THREE.PointLight(0xffffff, 0.25, 0, 0);
+		const pointLight = new PointLight(0xffffff, 0.25, 0, 0);
 		pointLight.position.set(-200, -200, -200);
 		this.scene.add(pointLight);
 
-		this.gridHelper = new THREE.GridHelper(10000, 1000, 0x888888, 0x444444);
+		this.gridHelper = new GridHelper(10000, 1000, 0x888888, 0x444444);
 		this.gridHelper.material.depthTest = false;
 		this.gridHelper.visible = this.settings.surfaces === Surfaces.Grid;
 		this.scene.add(this.gridHelper);
@@ -150,7 +167,7 @@ export class Preview {
 		const geometry = loader.parse(buildPlate.buffer as ArrayBuffer);
 		geometry.rotateX(-Math.PI / 2);
 
-		const material = new THREE.MeshStandardMaterial({
+		const material = new MeshStandardMaterial({
 			color: 0x403e41,
 			depthTest: false,
 			fog: false,
@@ -158,13 +175,13 @@ export class Preview {
 			roughness: 0.75,
 		});
 
-		this.buildPlateMesh = new THREE.Mesh(geometry, material);
+		this.buildPlateMesh = new Mesh(geometry, material);
 		this.buildPlateMesh.receiveShadow = true;
 		this.buildPlateMesh.visible =
 			this.settings.surfaces === Surfaces.BuildPlate;
 		this.scene.add(this.buildPlateMesh);
 
-		this.buildPlateGrid = new THREE.GridHelper(250, 25, 0x888888, 0x555555);
+		this.buildPlateGrid = new GridHelper(250, 25, 0x888888, 0x555555);
 		this.buildPlateGrid.material.depthTest = false;
 		this.buildPlateGrid.material.fog = false;
 		this.buildPlateGrid.visible =
@@ -183,7 +200,7 @@ export class Preview {
 				break;
 			case "renderMode":
 				this.modelGroup.traverse((child) => {
-					if (child instanceof THREE.Mesh) {
+					if (child instanceof Mesh) {
 						this.applyMaterialSettings(child);
 					}
 				});
@@ -196,7 +213,7 @@ export class Preview {
 			case "shadows":
 				this.renderer.shadowMap.enabled = this.settings.shadows;
 				this.modelGroup.traverse((child) => {
-					if (child instanceof THREE.Mesh) {
+					if (child instanceof Mesh) {
 						child.castShadow = this.settings.shadows;
 						child.receiveShadow = this.settings.shadows;
 					}
@@ -205,7 +222,7 @@ export class Preview {
 		}
 	}
 
-	private applyMaterialSettings(mesh: THREE.Mesh) {
+	private applyMaterialSettings(mesh: Mesh) {
 		const materials = Array.isArray(mesh.material)
 			? mesh.material
 			: [mesh.material];
@@ -225,7 +242,7 @@ export class Preview {
 	}
 
 	public initModel() {
-		this.modelGroup = new THREE.Group();
+		this.modelGroup = new Group();
 		this.scene.add(this.modelGroup);
 		this.showLoading();
 	}
@@ -246,7 +263,7 @@ export class Preview {
 			this.modelGroup.clear();
 
 			group.traverse((child) => {
-				if (child instanceof THREE.Mesh) {
+				if (child instanceof Mesh) {
 					this.applyMaterialSettings(child);
 				}
 			});
@@ -272,7 +289,7 @@ export class Preview {
 			const geometry = loader.parse(bytes.buffer);
 			geometry.rotateX(-Math.PI / 2);
 
-			const material = new THREE.MeshStandardMaterial({
+			const material = new MeshStandardMaterial({
 				color: 0xffffff,
 				flatShading: false,
 				fog: false,
@@ -280,7 +297,7 @@ export class Preview {
 
 			this.modelGroup.clear();
 
-			const mesh = new THREE.Mesh(geometry, material);
+			const mesh = new Mesh(geometry, material);
 			this.applyMaterialSettings(mesh);
 
 			this.modelGroup.add(mesh);

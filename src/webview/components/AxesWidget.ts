@@ -1,14 +1,24 @@
-import * as THREE from "three";
+import {
+	AxesHelper,
+	Camera,
+	CanvasTexture,
+	PerspectiveCamera,
+	Scene,
+	Sprite,
+	SpriteMaterial,
+	Vector3,
+	WebGLRenderer,
+} from "three";
 
 export class AxesWidget {
-	private scene: THREE.Scene;
-	private camera: THREE.PerspectiveCamera;
-	private renderer: THREE.WebGLRenderer;
+	private scene: Scene;
+	private camera: PerspectiveCamera;
+	private renderer: WebGLRenderer;
 
 	constructor(container: HTMLElement) {
-		this.scene = new THREE.Scene();
-		this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-		this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+		this.scene = new Scene();
+		this.camera = new PerspectiveCamera(50, 1, 0.1, 100);
+		this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
 
 		this.initRenderer(container);
 		this.initAxes();
@@ -23,15 +33,15 @@ export class AxesWidget {
 	}
 
 	private initAxes() {
-		const axesHelper = new THREE.AxesHelper(2);
+		const axesHelper = new AxesHelper(2);
 		this.scene.add(axesHelper);
 
-		this.addLabel("X", new THREE.Vector3(2.5, 0, 0), "#ff0000");
-		this.addLabel("Y", new THREE.Vector3(0, 2.5, 0), "#00ff00");
-		this.addLabel("Z", new THREE.Vector3(0, 0, 2.5), "#0000ff");
+		this.addLabel("X", new Vector3(2.5, 0, 0), "#ff0000");
+		this.addLabel("Y", new Vector3(0, 2.5, 0), "#00ff00");
+		this.addLabel("Z", new Vector3(0, 0, 2.5), "#0000ff");
 	}
 
-	private addLabel(text: string, position: THREE.Vector3, color: string) {
+	private addLabel(text: string, position: Vector3, color: string) {
 		const canvas = document.createElement("canvas");
 		canvas.width = 64;
 		canvas.height = 64;
@@ -44,16 +54,16 @@ export class AxesWidget {
 		ctx.textBaseline = "middle";
 		ctx.fillText(text, 32, 32);
 
-		const texture = new THREE.CanvasTexture(canvas);
-		const material = new THREE.SpriteMaterial({ map: texture });
-		const sprite = new THREE.Sprite(material);
+		const texture = new CanvasTexture(canvas);
+		const material = new SpriteMaterial({ map: texture });
+		const sprite = new Sprite(material);
 		sprite.position.copy(position);
 		this.scene.add(sprite);
 	}
 
-	update(mainCamera: THREE.Camera) {
+	update(mainCamera: Camera) {
 		const distance = 7;
-		const direction = new THREE.Vector3(0, 0, 1);
+		const direction = new Vector3(0, 0, 1);
 		direction.applyQuaternion(mainCamera.quaternion);
 
 		this.camera.position.copy(direction.multiplyScalar(distance));

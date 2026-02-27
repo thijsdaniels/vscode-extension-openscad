@@ -1,9 +1,9 @@
-import * as vscode from "vscode";
+import { EventEmitter, OutputChannel, Uri } from "vscode";
 import { ScadParameter } from "../../shared/types/parameters";
-import { ScadParameters } from "./ScadParameters";
 import { OpenScadCli } from "../services/OpenScadCli";
 import { ScadParser } from "../services/ScadParser";
 import { ScadWatcher } from "../services/ScadWatcher";
+import { ScadParameters } from "./ScadParameters";
 
 /**
  * Represents a single SCAD document session.
@@ -16,23 +16,23 @@ export class OpenScadSession {
 	private _lastPreviewFormat: "3mf" | "stl" = "3mf";
 
 	// Events that Views can subscribe to
-	private _onPreviewUpdated = new vscode.EventEmitter<{
+	private _onPreviewUpdated = new EventEmitter<{
 		buffer: Buffer;
 		format: "3mf" | "stl";
 	}>();
 	public readonly onPreviewUpdated = this._onPreviewUpdated.event;
 
-	private _onParametersUpdated = new vscode.EventEmitter<ScadParameter[]>();
+	private _onParametersUpdated = new EventEmitter<ScadParameter[]>();
 	public readonly onParametersUpdated = this._onParametersUpdated.event;
 
-	private _onRenderStarted = new vscode.EventEmitter<void>();
+	private _onRenderStarted = new EventEmitter<void>();
 	public readonly onRenderStarted = this._onRenderStarted.event;
 
 	constructor(
-		public readonly documentUri: vscode.Uri,
+		public readonly documentUri: Uri,
 		private readonly cli: OpenScadCli,
 		parser: ScadParser,
-		logger: vscode.OutputChannel,
+		logger: OutputChannel,
 	) {
 		// Manager for current parameter values
 		this.scadParameters = new ScadParameters(() => {

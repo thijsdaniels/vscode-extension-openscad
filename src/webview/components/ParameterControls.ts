@@ -1,4 +1,4 @@
-import { ScadParameter } from "../ScadParameter";
+import { ScadParameter } from "../../shared/types/parameters";
 
 export class ParameterControls {
 	private container: HTMLElement;
@@ -6,7 +6,7 @@ export class ParameterControls {
 
 	constructor(
 		container: HTMLElement,
-		onChange?: (name: string, value: unknown) => void
+		onChange?: (name: string, value: unknown) => void,
 	) {
 		this.container = container;
 		this.container.className = "parameters";
@@ -75,7 +75,7 @@ export class ParameterControls {
 		switch (param.type) {
 			case "boolean": {
 				const input = document.createElement(
-					"vscode-checkbox"
+					"vscode-checkbox",
 				) as HTMLInputElement;
 
 				input.checked = param.value;
@@ -87,7 +87,7 @@ export class ParameterControls {
 			}
 			case "number": {
 				const input = document.createElement(
-					"vscode-text-field"
+					"vscode-text-field",
 				) as HTMLInputElement;
 
 				input.size = 5;
@@ -100,7 +100,7 @@ export class ParameterControls {
 			}
 			case "string": {
 				const input = document.createElement(
-					"vscode-text-field"
+					"vscode-text-field",
 				) as HTMLInputElement;
 
 				input.size = 5;
