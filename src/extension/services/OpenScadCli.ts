@@ -1,14 +1,19 @@
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import * as vscode from "vscode";
+import * as os from "os";
+import * as path from "path";
+import * as fs from "fs/promises";
+import * as crypto from "crypto";
 
 export class OpenScadCli {
 	private activeProcesses = new Map<string, ChildProcessWithoutNullStreams>();
 
 	constructor(private logger: vscode.OutputChannel) {}
 
-	public async renderStl(
+	public async render(
 		scadPath: string,
 		parameters: string[] = [],
+		format: "3mf" | "stl" = "3mf",
 	): Promise<Buffer> {
 		// Kill any currently running process for this file to prevent runway spawn leaks
 		// when sliders emit rapid updates
@@ -20,29 +25,28 @@ export class OpenScadCli {
 		}
 
 		return new Promise((resolve, reject) => {
-			const process = spawn("openscad", [
-				"--export-format",
-				"stl",
-				"-o",
-				"-",
-				"-q",
-				...parameters,
-				scadPath,
-			]);
+			const tmpFile = path.join(
+				os.tmpdir(),
+				`openscad-render-${crypto.randomUUID()}.${format}`,
+			);
+
+			const spawnArgs = ["--export-format", format];
+
+			if (format === "3mf") {
+				spawnArgs.push("-O", "export-3mf/material-type=color");
+			}
+
+			spawnArgs.push("-o", tmpFile, "-q", ...parameters, scadPath);
+
+			const process = spawn("openscad", spawnArgs);
 
 			this.activeProcesses.set(scadPath, process);
-
-			const chunks: Buffer[] = [];
-
-			process.stdout.on("data", (chunk: Buffer) => {
-				chunks.push(chunk);
-			});
 
 			process.stderr.on("data", () => {
 				// We don't log normal output here natively yet, but we will for Diagnostics.
 			});
 
-			process.on("close", (code, signal) => {
+			process.on("close", async (code, signal) => {
 				this.activeProcesses.delete(scadPath);
 
 				// If process was killed gracefully by our cancellation, cleanly reject error
@@ -58,7 +62,19 @@ export class OpenScadCli {
 					return;
 				}
 
-				resolve(Buffer.concat(chunks));
+				try {
+					const buffer = await fs.readFile(tmpFile);
+					resolve(buffer);
+				} catch (err) {
+					reject(new Error(`Failed to read temporary 3MF file: ${err}`));
+				} finally {
+					// Clean up the temp file
+					try {
+						await fs.unlink(tmpFile);
+					} catch (e) {
+						// Ignore cleanup failure
+					}
+				}
 			});
 
 			process.on("error", (err) => {

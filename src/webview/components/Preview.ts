@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import buildPlate from "../assets/models/buildPlate.stl";
 import { AxesWidget } from "./AxesWidget";
 import { RenderMode, Surfaces, Toolbar, ViewSettings } from "./Toolbar";
-import buildPlate from "../assets/models/buildPlate.stl";
 
 export class Preview {
 	private scene!: THREE.Scene;
@@ -12,7 +13,7 @@ export class Preview {
 	private orthoCamera!: THREE.OrthographicCamera;
 	private renderer!: THREE.WebGLRenderer;
 	private controls!: OrbitControls;
-	private mesh!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+	private modelGroup!: THREE.Group;
 	private gridHelper!: THREE.GridHelper;
 	private settings: ViewSettings;
 	private axesWidget!: AxesWidget;
@@ -29,6 +30,8 @@ export class Preview {
 		this.scene = new THREE.Scene();
 		this.clock = new THREE.Clock();
 
+		this.loadingOverlay = container.querySelector("#loading-overlay")!;
+
 		const { width, height } = container.getBoundingClientRect();
 		this.initRenderer(container, width, height);
 		this.initCameras(width, height);
@@ -43,8 +46,6 @@ export class Preview {
 			this.settings,
 			this.handleSettingChange.bind(this),
 		);
-
-		this.loadingOverlay = container.querySelector("#loading-overlay")!;
 
 		// Listen for messages from the extension
 		window.addEventListener("message", (event) => {
@@ -181,13 +182,11 @@ export class Preview {
 					this.settings.surfaces === Surfaces.BuildPlate;
 				break;
 			case "renderMode":
-				this.mesh.material.wireframe =
-					this.settings.renderMode === RenderMode.Wireframe;
-				this.mesh.material.transparent =
-					this.settings.renderMode === RenderMode.XRay;
-				this.mesh.material.opacity =
-					this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
-				this.mesh.material.needsUpdate = true;
+				this.modelGroup.traverse((child) => {
+					if (child instanceof THREE.Mesh) {
+						this.applyMaterialSettings(child);
+					}
+				});
 				break;
 			case "orthographic":
 				this.activeCamera = this.settings.orthographic
@@ -196,55 +195,104 @@ export class Preview {
 				break;
 			case "shadows":
 				this.renderer.shadowMap.enabled = this.settings.shadows;
-				this.mesh.castShadow = this.settings.shadows;
-				this.mesh.receiveShadow = this.settings.shadows;
+				this.modelGroup.traverse((child) => {
+					if (child instanceof THREE.Mesh) {
+						child.castShadow = this.settings.shadows;
+						child.receiveShadow = this.settings.shadows;
+					}
+				});
 				break;
 		}
 	}
 
-	public initModel() {
-		const material = new THREE.MeshStandardMaterial({
-			color: 0xffffff,
-			flatShading: false,
-			fog: false,
+	private applyMaterialSettings(mesh: THREE.Mesh) {
+		const materials = Array.isArray(mesh.material)
+			? mesh.material
+			: [mesh.material];
+
+		materials.forEach((mat) => {
+			if (mat && "wireframe" in mat) {
+				(mat as any).wireframe =
+					this.settings.renderMode === RenderMode.Wireframe;
+				(mat as any).transparent = this.settings.renderMode === RenderMode.XRay;
+				(mat as any).opacity =
+					this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
+				(mat as any).needsUpdate = true;
+			}
 		});
-
-		this.mesh = new THREE.Mesh(this.loadingGeometry, material);
-
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-		this.mesh.material.wireframe =
-			this.settings.renderMode === RenderMode.Wireframe;
-		this.mesh.material.transparent =
-			this.settings.renderMode === RenderMode.XRay;
-		this.mesh.material.opacity =
-			this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
-		this.mesh.castShadow = this.settings.shadows;
-		this.mesh.receiveShadow = this.settings.shadows;
-
-		this.scene.add(this.mesh);
+		mesh.castShadow = this.settings.shadows;
+		mesh.receiveShadow = this.settings.shadows;
 	}
 
-	public loadSTL(stlContent: string) {
-		const loader = new STLLoader();
-		const binaryString = window.atob(stlContent);
+	public initModel() {
+		this.modelGroup = new THREE.Group();
+		this.scene.add(this.modelGroup);
+		this.showLoading();
+	}
+
+	public load3MF(base64Content: string) {
+		const loader = new ThreeMFLoader();
+		const binaryString = window.atob(base64Content);
 
 		const bytes = new Uint8Array(binaryString.length);
 		for (let i = 0; i < binaryString.length; i++) {
 			bytes[i] = binaryString.charCodeAt(i);
 		}
 
-		const geometry = loader.parse(bytes.buffer);
-		geometry.rotateX(-Math.PI / 2);
+		try {
+			const group = loader.parse(bytes.buffer);
+			group.rotateX(-Math.PI / 2);
 
-		this.mesh.geometry = geometry;
+			this.modelGroup.clear();
 
-		this.hideLoading();
+			group.traverse((child) => {
+				if (child instanceof THREE.Mesh) {
+					this.applyMaterialSettings(child);
+				}
+			});
+
+			this.modelGroup.add(group);
+			this.hideLoading();
+		} catch (error) {
+			console.error("Failed to parse 3MF model:", error);
+			this.hideLoading(); // At least hide the spinner, maybe show an error state if added later
+		}
+	}
+
+	public loadSTL(base64Content: string) {
+		const loader = new STLLoader();
+		const binaryString = window.atob(base64Content);
+
+		const bytes = new Uint8Array(binaryString.length);
+		for (let i = 0; i < binaryString.length; i++) {
+			bytes[i] = binaryString.charCodeAt(i);
+		}
+
+		try {
+			const geometry = loader.parse(bytes.buffer);
+			geometry.rotateX(-Math.PI / 2);
+
+			const material = new THREE.MeshStandardMaterial({
+				color: 0xffffff,
+				flatShading: false,
+				fog: false,
+			});
+
+			this.modelGroup.clear();
+
+			const mesh = new THREE.Mesh(geometry, material);
+			this.applyMaterialSettings(mesh);
+
+			this.modelGroup.add(mesh);
+			this.hideLoading();
+		} catch (error) {
+			console.error("Failed to parse STL model:", error);
+			this.hideLoading();
+		}
 	}
 
 	private showLoading() {
 		this.isLoading = true;
-		this.mesh.geometry = this.loadingGeometry;
 		this.loadingOverlay.style.display = "flex";
 	}
 

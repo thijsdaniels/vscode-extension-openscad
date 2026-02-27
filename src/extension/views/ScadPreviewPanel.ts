@@ -42,8 +42,8 @@ export class ScadPreviewPanel {
 					case "parameterChanged":
 						this.session.updateParameterValue(message.name, message.value);
 						return;
-					case "exportStl":
-						this.exportStl();
+					case "exportModel":
+						this.exportModel();
 						return;
 					case "error":
 						vscode.window.showErrorMessage(`Preview Error: ${message.message}`);
@@ -67,9 +67,9 @@ export class ScadPreviewPanel {
 			this.disposables,
 		);
 
-		this.session.onStlUpdated(
-			(stlData) => {
-				if (stlData.toString() === "loading") {
+		this.session.onPreviewUpdated(
+			({ buffer, format }) => {
+				if (buffer.toString() === "loading") {
 					this.postMessage({
 						type: "loadingState",
 						loading: true,
@@ -78,10 +78,11 @@ export class ScadPreviewPanel {
 					return;
 				}
 
-				const base64Data = stlData.toString("base64");
+				const base64Data = buffer.toString("base64");
 				this.postMessage({
 					type: "update",
 					content: base64Data,
+					format,
 				});
 			},
 			null,
@@ -106,11 +107,13 @@ export class ScadPreviewPanel {
 	}
 
 	private pushInitialState() {
-		// Send initial STL if it already rendered
-		if (this.session.lastStlData) {
+		// Send initial preview data if it already rendered
+		const lastData = this.session.lastPreviewData;
+		if (lastData) {
 			this.postMessage({
 				type: "update",
-				content: this.session.lastStlData.toString("base64"),
+				content: lastData.buffer.toString("base64"),
+				format: lastData.format,
 			});
 		}
 
@@ -124,32 +127,58 @@ export class ScadPreviewPanel {
 		}
 	}
 
-	private async exportStl() {
-		const stlData = this.session.lastStlData;
-		if (!stlData) {
-			vscode.window.showErrorMessage("No STL data available to export.");
-			return;
+	private async exportModel() {
+		const format = await vscode.window.showQuickPick(["3mf", "stl"], {
+			title: "Select Export Format",
+			placeHolder:
+				"Choose 3D model format to export (3MF for colors, STL for geometry)",
+		});
+
+		if (!format) {
+			return; // User cancelled
 		}
 
 		const defaultUri = vscode.Uri.file(
-			this.session.documentUri.fsPath.replace(/\.scad$/i, ".stl"),
+			this.session.documentUri.fsPath.replace(/\.scad$/i, `.${format}`),
 		);
+
+		const filters: { [name: string]: string[] } = {};
+		if (format === "3mf") {
+			filters["3MF Files"] = ["3mf"];
+		} else {
+			filters["STL Files"] = ["stl"];
+		}
+
 		const uri = await vscode.window.showSaveDialog({
 			defaultUri,
-			filters: {
-				"STL Files": ["stl"],
-			},
-			title: "Export STL",
+			filters,
+			title: `Export ${format.toUpperCase()}`,
 		});
 
 		if (uri) {
 			try {
-				await vscode.workspace.fs.writeFile(uri, new Uint8Array(stlData));
+				// We display a localized progress UI so the user knows an on-demand background render is happening
+				await vscode.window.withProgress(
+					{
+						location: vscode.ProgressLocation.Notification,
+						title: `Rendering ${format.toUpperCase()}...`,
+						cancellable: false,
+					},
+					async () => {
+						const buffer = await this.session.exportFormat(
+							format as "3mf" | "stl",
+						);
+						await vscode.workspace.fs.writeFile(uri, new Uint8Array(buffer));
+					},
+				);
+
 				vscode.window.showInformationMessage(
-					`Successfully exported STL to ${uri.fsPath}`,
+					`Successfully exported ${format.toUpperCase()} to ${uri.fsPath}`,
 				);
 			} catch (error) {
-				vscode.window.showErrorMessage(`Failed to export STL: ${error}`);
+				vscode.window.showErrorMessage(
+					`Failed to export ${format.toUpperCase()}: ${error}`,
+				);
 			}
 		}
 	}

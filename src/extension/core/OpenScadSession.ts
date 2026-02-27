@@ -12,11 +12,15 @@ import { ScadWatcher } from "../services/ScadWatcher";
 export class OpenScadSession {
 	private scadWatcher: ScadWatcher;
 	private scadParameters: ScadParameters;
-	private _lastStlData: Buffer | undefined;
+	private _lastPreviewData: Buffer | undefined;
+	private _lastPreviewFormat: "3mf" | "stl" = "3mf";
 
 	// Events that Views can subscribe to
-	private _onStlUpdated = new vscode.EventEmitter<Buffer>();
-	public readonly onStlUpdated = this._onStlUpdated.event;
+	private _onPreviewUpdated = new vscode.EventEmitter<{
+		buffer: Buffer;
+		format: "3mf" | "stl";
+	}>();
+	public readonly onPreviewUpdated = this._onPreviewUpdated.event;
 
 	private _onParametersUpdated = new vscode.EventEmitter<ScadParameter[]>();
 	public readonly onParametersUpdated = this._onParametersUpdated.event;
@@ -26,7 +30,7 @@ export class OpenScadSession {
 
 	constructor(
 		public readonly documentUri: vscode.Uri,
-		cli: OpenScadCli,
+		private readonly cli: OpenScadCli,
 		parser: ScadParser,
 		logger: vscode.OutputChannel,
 	) {
@@ -42,11 +46,12 @@ export class OpenScadSession {
 			cli,
 			parser,
 			logger,
-			(stlData) => {
-				if (stlData.toString() !== "loading") {
-					this._lastStlData = stlData;
+			(data) => {
+				if (data.buffer.toString() !== "loading") {
+					this._lastPreviewData = data.buffer;
+					this._lastPreviewFormat = data.format;
 				}
-				this._onStlUpdated.fire(stlData);
+				this._onPreviewUpdated.fire(data);
 			},
 			(parameters) => {
 				this.scadParameters.updateDefinitions(parameters);
@@ -58,8 +63,11 @@ export class OpenScadSession {
 		this.scadWatcher.watchFile(documentUri.fsPath);
 	}
 
-	public get lastStlData(): Buffer | undefined {
-		return this._lastStlData;
+	public get lastPreviewData():
+		| { buffer: Buffer; format: "3mf" | "stl" }
+		| undefined {
+		if (!this._lastPreviewData) return undefined;
+		return { buffer: this._lastPreviewData, format: this._lastPreviewFormat };
 	}
 
 	public get currentParameters(): ScadParameter[] {
@@ -70,9 +78,17 @@ export class OpenScadSession {
 		this.scadParameters.updateValue(name, value);
 	}
 
+	public async exportFormat(format: "3mf" | "stl"): Promise<Buffer> {
+		return this.cli.render(
+			this.documentUri.fsPath,
+			this.scadParameters.getParameterArgs(),
+			format,
+		);
+	}
+
 	public dispose() {
 		this.scadWatcher.close();
-		this._onStlUpdated.dispose();
+		this._onPreviewUpdated.dispose();
 		this._onParametersUpdated.dispose();
 		this._onRenderStarted.dispose();
 	}

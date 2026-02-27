@@ -37,6 +37,20 @@
 		"vscode": "^1.80.0"
 	},
 	"contributes": {
+		"configuration": {
+			"title": "OpenSCAD",
+			"properties": {
+				"openscad.previewFormat": {
+					"type": "string",
+					"enum": [
+						"3mf",
+						"stl"
+					],
+					"default": "3mf",
+					"description": "The format to use for the 3D preview. 3MF supports colors but requires OpenSCAD Nightly. STL is universally supported."
+				}
+			}
+		},
 		"commands": [
 			{
 				"command": "openscad.showPanel",

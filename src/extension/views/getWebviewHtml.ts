@@ -192,7 +192,7 @@ export function getWebviewHtml(
 							<!-- Parameter controls will be dynamically inserted here -->
 						</div>
 						<div id="export-container">
-							<vscode-button id="export-button" style="width: 100%">Export STL</vscode-button>
+							<vscode-button id="export-button" style="width: 100%">Export Model</vscode-button>
 						</div>
 					</div>
 				</div>

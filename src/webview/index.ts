@@ -43,7 +43,7 @@ window.addEventListener("load", () => {
 	const exportButton = document.getElementById("export-button");
 	if (exportButton) {
 		exportButton.addEventListener("click", () => {
-			vscode.postMessage({ type: "exportStl" });
+			vscode.postMessage({ type: "exportModel" });
 		});
 	}
 
@@ -76,7 +76,11 @@ window.addEventListener("message", (event) => {
 				reportError("No content in update message");
 				return;
 			}
-			preview.loadSTL(message.content);
+			if (message.format === "3mf") {
+				preview.load3MF(message.content);
+			} else {
+				preview.loadSTL(message.content);
+			}
 			break;
 		case "updateParameters":
 			if (!message.parameters) {

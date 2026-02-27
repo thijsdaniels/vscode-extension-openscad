@@ -12,7 +12,10 @@ export class ScadWatcher {
 		private cli: OpenScadCli,
 		private parser: ScadParser,
 		private logger: vscode.OutputChannel,
-		private onChangeCallback: (stlData: Buffer) => void,
+		private onChangeCallback: (data: {
+			buffer: Buffer;
+			format: "3mf" | "stl";
+		}) => void,
 		private onParametersCallback?: (parameters: ScadParameter[]) => void,
 		private onRenderStartCallback?: () => void,
 	) {}
@@ -36,7 +39,10 @@ export class ScadWatcher {
 						this.onRenderStartCallback();
 					}
 					// Notify that we're starting to process
-					this.onChangeCallback(Buffer.from("loading"));
+					this.onChangeCallback({
+						buffer: Buffer.from("loading"),
+						format: "3mf",
+					});
 
 					// Get parameters first via injected parser
 					const newParams = await this.parser.extractParameters(scadPath);
@@ -44,8 +50,8 @@ export class ScadWatcher {
 						this.onParametersCallback(newParams);
 					}
 
-					// Then convert to STL via injected CLI wrapper
-					this.renderStl(scadPath);
+					// Then convert to 3MF via injected CLI wrapper
+					this.renderPreview(scadPath);
 				} catch (error) {
 					this.logger.appendLine(`[ERROR] Failed to process file: ${error}`);
 				}
@@ -64,13 +70,17 @@ export class ScadWatcher {
 		if (this.onRenderStartCallback) {
 			this.onRenderStartCallback();
 		}
-		this.renderStl(this.currentScadPath, paramArgs);
+		this.renderPreview(this.currentScadPath, paramArgs);
 	}
 
-	private async renderStl(scadPath: string, paramArgs: string[] = []) {
+	private async renderPreview(scadPath: string, paramArgs: string[] = []) {
 		try {
-			const stlBuffer = await this.cli.renderStl(scadPath, paramArgs);
-			this.onChangeCallback(stlBuffer);
+			const format = vscode.workspace
+				.getConfiguration("openscad")
+				.get<"3mf" | "stl">("previewFormat", "3mf");
+
+			const modelBuffer = await this.cli.render(scadPath, paramArgs, format);
+			this.onChangeCallback({ buffer: modelBuffer, format });
 		} catch (error) {
 			// Errors are already logged in the CLI wrapper
 		}
