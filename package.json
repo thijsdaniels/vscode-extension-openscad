@@ -1,111 +1,114 @@
 {
-	"name": "vscode-extension-openscad",
-	"version": "0.1.0",
-	"author": "Thijs Daniels",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/thijsdaniels/vscode-extension-openscad.git"
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run package",
-		"compile": "node ./esbuild.js",
-		"package": "NODE_ENV=production node ./esbuild.js",
-		"watch": "npm run compile -- --watch",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src --ext ts",
-		"test": "node ./dist/test/runTest.js"
-	},
-	"dependencies": {
-		"@vscode/webview-ui-toolkit": "^1.4.0",
-		"chokidar": "^3.5.3",
-		"three": "^0.154.0"
-	},
-	"devDependencies": {
-		"@types/node": "^16.x",
-		"@types/three": "^0.154.0",
-		"@types/vscode": "^1.80.0",
-		"@types/vscode-webview": "^1.57.5",
-		"@typescript-eslint/eslint-plugin": "^6.0.0",
-		"@typescript-eslint/parser": "^6.0.0",
-		"esbuild": "^0.19.5",
-		"eslint": "^8.44.0",
-		"typescript": "^5.1.6",
-		"vscode-test": "^1.6.1"
-	},
-	"engines": {
-		"vscode": "^1.80.0"
-	},
-	"contributes": {
-		"configuration": {
-			"title": "OpenSCAD",
-			"properties": {
-				"openscad.previewFormat": {
-					"type": "string",
-					"enum": [
-						"3mf",
-						"stl"
-					],
-					"default": "3mf",
-					"description": "The format to use for the 3D preview. 3MF supports colors but requires OpenSCAD Nightly. STL is universally supported."
-				}
-			}
-		},
-		"commands": [
-			{
-				"command": "openscad.showPanel",
-				"title": "Show OpenSCAD Preview",
-				"icon": "$(open-preview)"
-			}
-		],
-		"menus": {
-			"editor/title": [
-				{
-					"command": "openscad.showPanel",
-					"group": "navigation",
-					"when": "resourceLangId == scad || editorLangId == scad"
-				}
-			]
-		},
-		"keybindings": [
-			{
-				"command": "openscad.showPanel",
-				"key": "ctrl+shift+v",
-				"mac": "cmd+shift+v",
-				"when": "editorLangId == scad"
-			}
-		],
-		"languages": [
-			{
-				"id": "scad",
-				"extensions": [
-					".scad"
-				],
-				"aliases": [
-					"OpenSCAD"
-				],
-				"configuration": "./language-configuration.json"
-			}
-		],
-		"grammars": [
-			{
-				"language": "scad",
-				"scopeName": "source.scad",
-				"path": "./syntaxes/scad.tmLanguage.json"
-			}
-		],
-		"snippets": [
-			{
-				"language": "scad",
-				"path": "./snippets/scad.snippets.json"
-			}
-		]
-	},
-	"main": "./dist/extension.js",
-	"files": [
-		"dist",
-		"node_modules/three/build/three.module.js",
-		"node_modules/three/examples/jsm/controls/OrbitControls.js",
-		"node_modules/three/examples/jsm/loaders/STLLoader.js"
-	]
+  "name": "vscode-extension-openscad",
+  "version": "0.1.0",
+  "author": "Thijs Daniels",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thijsdaniels/vscode-extension-openscad.git"
+  },
+  "type": "module",
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "node ./esbuild.ts",
+    "package": "NODE_ENV=production node ./esbuild.ts",
+    "watch": "npm run compile -- --watch",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "format": "prettier --write .",
+    "test": "node ./dist/test/runTest.js"
+  },
+  "dependencies": {
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "chokidar": "^3.5.3",
+    "three": "^0.154.0"
+  },
+  "devDependencies": {
+    "@types/node": "^16.x",
+    "@types/three": "^0.154.0",
+    "@types/vscode": "^1.80.0",
+    "@types/vscode-webview": "^1.57.5",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.19.5",
+    "eslint": "^8.44.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.1.6",
+    "vscode-test": "^1.6.1"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "OpenSCAD",
+      "properties": {
+        "openscad.previewFormat": {
+          "type": "string",
+          "enum": [
+            "3mf",
+            "stl"
+          ],
+          "default": "3mf",
+          "description": "The format to use for the 3D preview. 3MF supports colors but requires OpenSCAD Nightly. STL is universally supported."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "openscad.showPanel",
+        "title": "Show OpenSCAD Preview",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "openscad.showPanel",
+          "group": "navigation",
+          "when": "resourceLangId == scad || editorLangId == scad"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "openscad.showPanel",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorLangId == scad"
+      }
+    ],
+    "languages": [
+      {
+        "id": "scad",
+        "extensions": [
+          ".scad"
+        ],
+        "aliases": [
+          "OpenSCAD"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "scad",
+        "scopeName": "source.scad",
+        "path": "./syntaxes/scad.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "scad",
+        "path": "./snippets/scad.snippets.json"
+      }
+    ]
+  },
+  "main": "./dist/extension.js",
+  "files": [
+    "dist",
+    "node_modules/three/build/three.module.js",
+    "node_modules/three/examples/jsm/controls/OrbitControls.js",
+    "node_modules/three/examples/jsm/loaders/STLLoader.js"
+  ]
 }

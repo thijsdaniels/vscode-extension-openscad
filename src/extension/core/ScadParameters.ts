@@ -1,49 +1,53 @@
 import { ScadParameter } from "../../shared/types/parameters";
 
 export class ScadParameters {
-	private parameters: Map<string, ScadParameter> = new Map();
-	private onChangeCallback?: () => void;
+  private parameters: Map<string, ScadParameter> = new Map();
+  private overrides: Map<string, any> = new Map();
+  private onChangeCallback?: () => void;
 
-	constructor(onChangeCallback?: () => void) {
-		this.onChangeCallback = onChangeCallback;
-	}
+  constructor(onChangeCallback?: () => void) {
+    this.onChangeCallback = onChangeCallback;
+  }
 
-	updateDefinitions(newParameters: ScadParameter[]) {
-		// Preserve existing values when updating parameter definitions
-		newParameters.forEach((param) => {
-			const existing = this.parameters.get(param.name);
-			if (existing) {
-				param.value = existing.value;
-			}
-			this.parameters.set(param.name, param);
-		});
+  updateDefinitions(newParameters: ScadParameter[]) {
+    this.parameters.clear();
+    newParameters.forEach((param) => {
+      this.parameters.set(param.name, param);
+    });
 
-		// Remove parameters that no longer exist
-		const newParamNames = new Set(newParameters.map((p) => p.name));
-		for (const [name] of this.parameters) {
-			if (!newParamNames.has(name)) {
-				this.parameters.delete(name);
-			}
-		}
-	}
+    // Remove overrides for parameters that no longer exist
+    for (const [name] of this.overrides) {
+      if (!this.parameters.has(name)) {
+        this.overrides.delete(name);
+      }
+    }
+  }
 
-	updateValue(name: string, value: any) {
-		const param = this.parameters.get(name);
-		if (param) {
-			param.value = value;
-			this.parameters.set(name, param);
-			this.onChangeCallback?.();
-		}
-	}
+  updateValue(name: string, value: any) {
+    if (value === null || value === undefined) {
+      this.overrides.delete(name);
+    } else {
+      this.overrides.set(name, value);
+    }
+    this.onChangeCallback?.();
+  }
 
-	getParameters(): ScadParameter[] {
-		return Array.from(this.parameters.values());
-	}
+  getParameters(): ScadParameter[] {
+    return Array.from(this.parameters.values());
+  }
 
-	getParameterArgs(): string[] {
-		return Array.from(this.parameters.values()).flatMap((p) => [
-			"--D",
-			`${p.name}=${p.value}`,
-		]);
-	}
+  getOverrides(): Record<string, any> {
+    return Object.fromEntries(this.overrides);
+  }
+
+  getParameterArgs(): string[] {
+    const args: string[] = [];
+    for (const param of this.parameters.values()) {
+      const value = this.overrides.has(param.name)
+        ? this.overrides.get(param.name)
+        : param.value;
+      args.push("--D", `${param.name}=${value}`);
+    }
+    return args;
+  }
 }

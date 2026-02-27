@@ -1,4 +1,4 @@
 declare module "*.stl" {
-	const value: Uint8Array;
-	export default value;
+  const value: Uint8Array;
+  export default value;
 }

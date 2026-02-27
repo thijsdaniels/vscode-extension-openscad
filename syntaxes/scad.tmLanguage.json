@@ -1,91 +1,91 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "OpenSCAD",
-	"patterns": [
-		{
-			"include": "#comments"
-		},
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		},
-		{
-			"include": "#numbers"
-		},
-		{
-			"include": "#variables"
-		},
-		{
-			"include": "#functions"
-		}
-	],
-	"repository": {
-		"comments": {
-			"patterns": [
-				{
-					"begin": "/\\*",
-					"end": "\\*/",
-					"name": "comment.block.scad"
-				},
-				{
-					"match": "//.*$",
-					"name": "comment.line.double-slash.scad"
-				}
-			]
-		},
-		"keywords": {
-			"patterns": [
-				{
-					"match": "\\b(module|function|include|use)\\b",
-					"name": "keyword.control.directive.scad"
-				},
-				{
-					"match": "\\b(if|else|for|intersection_for|assign|let)\\b",
-					"name": "keyword.control.scad"
-				},
-				{
-					"match": "\\b(echo|render|surface|search|version|version_num)\\b",
-					"name": "support.function.scad"
-				},
-				{
-					"match": "\\b(false|true|undef)\\b",
-					"name": "constant.language.scad"
-				},
-				{
-					"match": "\\b(cube|sphere|cylinder|polyhedron|square|circle|polygon|text|linear_extrude|rotate_extrude|scale|resize|rotate|translate|mirror|multmatrix|color|offset|hull|minkowski|union|difference|intersection|projection|surface)\\b",
-					"name": "support.function.scad"
-				},
-				{
-					"match": "\\b(abs|sign|sin|cos|tan|acos|asin|atan|atan2|floor|round|ceil|ln|log|pow|sqrt|exp|rands|min|max|concat|lookup|str|chr|ord|norm|cross|parent_module)\\b",
-					"name": "support.function.scad"
-				}
-			]
-		},
-		"strings": {
-			"name": "string.quoted.double.scad",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.scad",
-					"match": "\\\\."
-				}
-			]
-		},
-		"numbers": {
-			"match": "\\b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\\.?[0-9]*)|(\\.[0-9]+))((e|E)(\\+|-)?[0-9]+)?)\\b",
-			"name": "constant.numeric.scad"
-		},
-		"variables": {
-			"match": "\\$[a-zA-Z0-9_]+\\b",
-			"name": "variable.language.scad"
-		},
-		"functions": {
-			"match": "\\b[a-zA-Z0-9_]+\\b(?=\\s*\\()",
-			"name": "entity.name.function.scad"
-		}
-	},
-	"scopeName": "source.scad"
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "OpenSCAD",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#functions"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
+          "name": "comment.block.scad"
+        },
+        {
+          "match": "//.*$",
+          "name": "comment.line.double-slash.scad"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(module|function|include|use)\\b",
+          "name": "keyword.control.directive.scad"
+        },
+        {
+          "match": "\\b(if|else|for|intersection_for|assign|let)\\b",
+          "name": "keyword.control.scad"
+        },
+        {
+          "match": "\\b(echo|render|surface|search|version|version_num)\\b",
+          "name": "support.function.scad"
+        },
+        {
+          "match": "\\b(false|true|undef)\\b",
+          "name": "constant.language.scad"
+        },
+        {
+          "match": "\\b(cube|sphere|cylinder|polyhedron|square|circle|polygon|text|linear_extrude|rotate_extrude|scale|resize|rotate|translate|mirror|multmatrix|color|offset|hull|minkowski|union|difference|intersection|projection|surface)\\b",
+          "name": "support.function.scad"
+        },
+        {
+          "match": "\\b(abs|sign|sin|cos|tan|acos|asin|atan|atan2|floor|round|ceil|ln|log|pow|sqrt|exp|rands|min|max|concat|lookup|str|chr|ord|norm|cross|parent_module)\\b",
+          "name": "support.function.scad"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.scad",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.scad",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "match": "\\b((0(x|X)[0-9a-fA-F]*)|(([0-9]+\\.?[0-9]*)|(\\.[0-9]+))((e|E)(\\+|-)?[0-9]+)?)\\b",
+      "name": "constant.numeric.scad"
+    },
+    "variables": {
+      "match": "\\$[a-zA-Z0-9_]+\\b",
+      "name": "variable.language.scad"
+    },
+    "functions": {
+      "match": "\\b[a-zA-Z0-9_]+\\b(?=\\s*\\()",
+      "name": "entity.name.function.scad"
+    }
+  },
+  "scopeName": "source.scad"
 }

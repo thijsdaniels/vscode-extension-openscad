@@ -1,10 +1,10 @@
 import {
-	commands,
-	Disposable,
-	ExtensionContext,
-	Uri,
-	ViewColumn,
-	window,
+  commands,
+  Disposable,
+  ExtensionContext,
+  Uri,
+  ViewColumn,
+  window,
 } from "vscode";
 import { OpenScadSessionManager } from "../core/OpenScadSessionManager";
 import { ScadPreviewPanel } from "../views/ScadPreviewPanel";
@@ -13,58 +13,58 @@ import { ScadPreviewPanel } from "../views/ScadPreviewPanel";
 const activePanels = new Map<string, ScadPreviewPanel>();
 
 export function registerShowPanelCommand(
-	context: ExtensionContext,
-	sessionManager: OpenScadSessionManager,
+  context: ExtensionContext,
+  sessionManager: OpenScadSessionManager,
 ): Disposable {
-	return commands.registerCommand("openscad.showPanel", () => {
-		const editor = window.activeTextEditor;
+  return commands.registerCommand("openscad.showPanel", () => {
+    const editor = window.activeTextEditor;
 
-		if (!editor) {
-			return;
-		}
+    if (!editor) {
+      return;
+    }
 
-		const documentUri = editor.document.uri;
-		const key = documentUri.toString();
+    const documentUri = editor.document.uri;
+    const key = documentUri.toString();
 
-		// If a panel is already open for this file, just reveal it
-		if (activePanels.has(key)) {
-			// There's currently no public API on ScadPreviewPanel to reveal,
-			// but we can add one later if needed. For now, we just skip creating a duplicate.
-			window.showInformationMessage("Preview is already open for this file.");
-			return;
-		}
+    // If a panel is already open for this file, just reveal it
+    if (activePanels.has(key)) {
+      // There's currently no public API on ScadPreviewPanel to reveal,
+      // but we can add one later if needed. For now, we just skip creating a duplicate.
+      window.showInformationMessage("Preview is already open for this file.");
+      return;
+    }
 
-		// Retrieve or create the long-lived session for this document
-		const session = sessionManager.getOrCreateSession(documentUri);
+    // Retrieve or create the long-lived session for this document
+    const session = sessionManager.getOrCreateSession(documentUri);
 
-		// Create the Webview tab
-		const webviewPanel = window.createWebviewPanel(
-			"openscadPreview",
-			`OpenSCAD Preview: ${documentUri.path.split("/").pop()}`,
-			ViewColumn.Beside,
-			{
-				enableScripts: true,
-				enableFindWidget: true,
-				localResourceRoots: [
-					Uri.joinPath(context.extensionUri, "dist"),
-					Uri.joinPath(context.extensionUri, "node_modules", "three"),
-				],
-			},
-		);
+    // Create the Webview tab
+    const webviewPanel = window.createWebviewPanel(
+      "openscadPreview",
+      `OpenSCAD Preview: ${documentUri.path.split("/").pop()}`,
+      ViewColumn.Beside,
+      {
+        enableScripts: true,
+        enableFindWidget: true,
+        localResourceRoots: [
+          Uri.joinPath(context.extensionUri, "dist"),
+          Uri.joinPath(context.extensionUri, "node_modules", "three"),
+        ],
+      },
+    );
 
-		// Instantiate our controller wrapper
-		const scadPreviewPanel = new ScadPreviewPanel(
-			webviewPanel,
-			context.extensionUri,
-			session,
-		);
+    // Instantiate our controller wrapper
+    const scadPreviewPanel = new ScadPreviewPanel(
+      webviewPanel,
+      context.extensionUri,
+      session,
+    );
 
-		activePanels.set(key, scadPreviewPanel);
+    activePanels.set(key, scadPreviewPanel);
 
-		// When the user closes the Webview, clean up our map and tell the session manager
-		webviewPanel.onDidDispose(() => {
-			activePanels.delete(key);
-			sessionManager.removeSession(documentUri);
-		});
-	});
+    // When the user closes the Webview, clean up our map and tell the session manager
+    webviewPanel.onDidDispose(() => {
+      activePanels.delete(key);
+      sessionManager.removeSession(documentUri);
+    });
+  });
 }

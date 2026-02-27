@@ -1,44 +1,44 @@
 {
-	"cube": {
-		"prefix": "cube",
-		"body": ["cube([${1:width}, ${2:depth}, ${3:height}], center=${4:false});"],
-		"description": "Create a cube"
-	},
-	"cylinder": {
-		"prefix": "cylinder",
-		"body": [
-			"cylinder(h=${1:height}, r1=${2:radius_bottom}, r2=${3:radius_top}, center=${4:false});"
-		],
-		"description": "Create a cylinder"
-	},
-	"sphere": {
-		"prefix": "sphere",
-		"body": ["sphere(r=${1:radius}, \\$fn=${2:50});"],
-		"description": "Create a sphere"
-	},
-	"module": {
-		"prefix": "module",
-		"body": ["module ${1:name}(${2:args}) {", "\t$0", "}"],
-		"description": "Create a module"
-	},
-	"function": {
-		"prefix": "function",
-		"body": ["function ${1:name}(${2:args}) = $0;"],
-		"description": "Create a function"
-	},
-	"for loop": {
-		"prefix": "for",
-		"body": ["for (${1:i} = [${2:start}:${3:step}:${4:end}]) {", "\t$0", "}"],
-		"description": "Create a for loop"
-	},
-	"translate": {
-		"prefix": "translate",
-		"body": ["translate([${1:x}, ${2:y}, ${3:z}]) {", "\t$0", "}"],
-		"description": "Translate an object"
-	},
-	"rotate": {
-		"prefix": "rotate",
-		"body": ["rotate([${1:x}, ${2:y}, ${3:z}]) {", "\t$0", "}"],
-		"description": "Rotate an object"
-	}
+  "cube": {
+    "prefix": "cube",
+    "body": ["cube([${1:width}, ${2:depth}, ${3:height}], center=${4:false});"],
+    "description": "Create a cube"
+  },
+  "cylinder": {
+    "prefix": "cylinder",
+    "body": [
+      "cylinder(h=${1:height}, r1=${2:radius_bottom}, r2=${3:radius_top}, center=${4:false});"
+    ],
+    "description": "Create a cylinder"
+  },
+  "sphere": {
+    "prefix": "sphere",
+    "body": ["sphere(r=${1:radius}, \\$fn=${2:50});"],
+    "description": "Create a sphere"
+  },
+  "module": {
+    "prefix": "module",
+    "body": ["module ${1:name}(${2:args}) {", "\t$0", "}"],
+    "description": "Create a module"
+  },
+  "function": {
+    "prefix": "function",
+    "body": ["function ${1:name}(${2:args}) = $0;"],
+    "description": "Create a function"
+  },
+  "for loop": {
+    "prefix": "for",
+    "body": ["for (${1:i} = [${2:start}:${3:step}:${4:end}]) {", "\t$0", "}"],
+    "description": "Create a for loop"
+  },
+  "translate": {
+    "prefix": "translate",
+    "body": ["translate([${1:x}, ${2:y}, ${3:z}]) {", "\t$0", "}"],
+    "description": "Translate an object"
+  },
+  "rotate": {
+    "prefix": "rotate",
+    "body": ["rotate([${1:x}, ${2:y}, ${3:z}]) {", "\t$0", "}"],
+    "description": "Rotate an object"
+  }
 }

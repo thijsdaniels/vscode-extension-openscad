@@ -1,12 +1,12 @@
 import { Uri, Webview } from "vscode";
 
 export function getWebviewHtml(webview: Webview, extensionUri: Uri): string {
-	// Get path to compiled preview script
-	const scriptUri = webview.asWebviewUri(
-		Uri.joinPath(extensionUri, "dist", "webview.js"),
-	);
+  // Get path to compiled preview script
+  const scriptUri = webview.asWebviewUri(
+    Uri.joinPath(extensionUri, "dist", "webview.js"),
+  );
 
-	return /* html */ `
+  return /* html */ `
 		<!DOCTYPE html>
 		<html>
 			<head>
@@ -80,6 +80,22 @@ export function getWebviewHtml(webview: Webview, extensionUri: Uri): string {
 						font-family: var(--vscode-editor-font-family);
 						font-size: var(--vscode-editor-font-size);
 						color: var(--vscode-foreground);
+						flex-grow: 1;
+					}
+					.input-container {
+						display: flex;
+						align-items: center;
+						gap: 0.5rem;
+					}
+					.button.revert {
+						cursor: pointer;
+						display: flex;
+						align-items: center;
+						padding: 4px;
+						border-radius: 4px;
+					}
+					.button.revert:hover {
+						background: var(--vscode-toolbar-hoverBackground);
 					}
 					#toolbar-container {
 						display: flex;
