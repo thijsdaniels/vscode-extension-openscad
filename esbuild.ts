@@ -10,7 +10,7 @@ const extensionConfig: BuildOptions = {
   ...commonConfig,
   entryPoints: ["src/extension/index.ts"],
   bundle: true,
-  outfile: "dist/extension.js",
+  outfile: "dist/extension.cjs",
   external: ["vscode", "fsevents"],
   platform: "node",
   format: "cjs",

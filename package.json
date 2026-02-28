@@ -104,7 +104,7 @@
       }
     ]
   },
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "files": [
     "dist",
     "node_modules/three/build/three.module.js",

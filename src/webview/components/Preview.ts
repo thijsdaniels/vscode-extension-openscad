@@ -240,6 +240,18 @@ export class Preview {
         (mat as any).opacity =
           this.settings.renderMode === RenderMode.XRay ? 0.5 : 1.0;
 
+        // Wireframe with flatShading results in zero normals from fragment shader derivatives,
+        // causing pitch black lines. We must disable flatShading for wireframes to render.
+        if ("flatShading" in mat) {
+          if (mat.userData.originalFlatShading === undefined) {
+            mat.userData.originalFlatShading = (mat as any).flatShading;
+          }
+          (mat as any).flatShading =
+            this.settings.renderMode === RenderMode.Wireframe
+              ? false
+              : mat.userData.originalFlatShading;
+        }
+
         if (!this.settings.colors) {
           if (mat.userData.originalColor === undefined && (mat as any).color) {
             mat.userData.originalColor = (mat as any).color.clone();
@@ -292,6 +304,9 @@ export class Preview {
 
       group.traverse((child) => {
         if (child instanceof Mesh) {
+          if (!child.geometry.attributes.normal) {
+            child.geometry.computeVertexNormals();
+          }
           this.applyMaterialSettings(child);
         }
       });
