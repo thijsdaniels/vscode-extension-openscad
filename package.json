@@ -16,26 +16,27 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "format": "prettier --write .",
-    "test": "node ./dist/test/runTest.js"
+    "test": "node ./dist/test/runTest.js",
+    "update": "npx npm-check-updates@latest -u -i"
   },
   "dependencies": {
     "@lit/context": "^1.1.6",
     "@vscode/webview-ui-toolkit": "^1.4.0",
-    "chokidar": "^3.5.3",
+    "chokidar": "^5.0.0",
     "lit": "^3.3.2",
-    "three": "^0.154.0"
+    "three": "^0.183.2"
   },
   "devDependencies": {
-    "@types/node": "^16.x",
-    "@types/three": "^0.154.0",
-    "@types/vscode": "^1.80.0",
+    "@types/node": "^25.x",
+    "@types/three": "^0.183.1",
+    "@types/vscode": "^1.109.0",
     "@types/vscode-webview": "^1.57.5",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "esbuild": "^0.19.5",
-    "eslint": "^8.44.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "esbuild": "^0.27.3",
+    "eslint": "^10.0.2",
     "prettier": "^3.8.1",
-    "typescript": "^5.1.6",
+    "typescript": "^5.9.3",
     "vscode-test": "^1.6.1"
   },
   "engines": {
