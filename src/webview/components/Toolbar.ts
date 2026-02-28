@@ -1,41 +1,46 @@
-export enum Surfaces {
-  Off = "off",
-  Grid = "grid",
-  BuildPlate = "buildPlate",
-}
+import { consume } from "@lit/context";
+import { css, html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
+import {
+  CameraMode,
+  ColorMode,
+  Environment,
+  RenderMode,
+  ShadowMode,
+  ViewSettings,
+  ViewSettingsContext,
+  viewSettingsContext,
+} from "../contexts/ViewSettingsContext";
+import "./Icon";
 
-export enum RenderMode {
-  Solid = "solid",
-  Wireframe = "wireframe",
-  XRay = "xray",
-}
-
-type SettingState = boolean | Surfaces;
-type IconKey<T> = T extends boolean ? "true" | "false" : T;
-
-interface SettingConfig<T extends SettingState> {
+interface ToolbarButton<T extends string> {
   states: T[];
-  icons: Record<IconKey<T>, string>;
+  icons: Record<T, string>;
   defaultState: T;
 }
 
-const settingConfigs: Record<string, SettingConfig<any>> = {
-  orthographic: {
-    states: [false, true],
+type ViewSettingsButtons = {
+  [K in keyof ViewSettings]: ToolbarButton<ViewSettings[K]>;
+};
+
+const viewSettingsButtons: ViewSettingsButtons = {
+  camera: {
+    states: [CameraMode.Perspective, CameraMode.Orthographic],
     icons: {
-      false: "visibility",
-      true: "deployed_code",
+      [CameraMode.Perspective]: "visibility",
+      [CameraMode.Orthographic]: "deployed_code",
     },
-    defaultState: false,
+    defaultState: CameraMode.Perspective,
   },
-  surfaces: {
-    states: [Surfaces.Off, Surfaces.Grid, Surfaces.BuildPlate],
+  surface: {
+    states: [Environment.None, Environment.Grid, Environment.BuildPlate],
     icons: {
-      [Surfaces.Off]: "grid_off",
-      [Surfaces.Grid]: "grid_on",
-      [Surfaces.BuildPlate]: "square",
+      [Environment.None]: "grid_off",
+      [Environment.Grid]: "grid_on",
+      [Environment.BuildPlate]: "square",
     },
-    defaultState: Surfaces.Grid,
+    defaultState: Environment.Grid,
   },
   renderMode: {
     states: [RenderMode.Solid, RenderMode.XRay, RenderMode.Wireframe],
@@ -47,97 +52,114 @@ const settingConfigs: Record<string, SettingConfig<any>> = {
     defaultState: RenderMode.Solid,
   },
   colors: {
-    states: [true, false],
+    states: [ColorMode.On, ColorMode.Off],
     icons: {
-      true: "palette",
-      false: "format_color_reset",
+      [ColorMode.On]: "palette",
+      [ColorMode.Off]: "format_color_reset",
     },
-    defaultState: true,
+    defaultState: ColorMode.On,
   },
   shadows: {
-    states: [false, true],
+    states: [ShadowMode.Off, ShadowMode.On],
     icons: {
-      false: "circle",
-      true: "ev_shadow",
+      [ShadowMode.Off]: "circle",
+      [ShadowMode.On]: "ev_shadow",
     },
-    defaultState: true,
+    defaultState: ShadowMode.On,
   },
 };
 
-export class ViewSettings {
-  surfaces = settingConfigs.surfaces.defaultState;
-  renderMode = settingConfigs.renderMode.defaultState;
-  orthographic = settingConfigs.orthographic.defaultState;
-  shadows = settingConfigs.shadows.defaultState;
-  colors = settingConfigs.colors.defaultState;
+@customElement("scad-toolbar")
+export class PreviewToolbar extends LitElement {
+  static styles = css`
+    :host {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .segment-group {
+      display: flex;
+      margin: 0 4px;
+    }
+
+    .segment-button {
+      border: 1px solid var(--vscode-input-border);
+      border-right: none;
+      background: transparent;
+      color: #888;
+      padding: 4px 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .segment-button:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+    }
+
+    .segment-button.active {
+      background: var(--vscode-toolbar-activeBackground);
+      color: var(--vscode-toolbar-activeForeground);
+    }
+
+    .segment-button.first {
+      border-radius: 4px 0 0 4px;
+    }
+
+    .segment-button.last {
+      border-radius: 0 4px 4px 0;
+      border-right: 1px solid var(--vscode-input-border);
+    }
+  `;
+
+  @consume({ context: viewSettingsContext, subscribe: true })
+  @state()
+  viewSettings!: ViewSettingsContext;
+
+  render() {
+    if (!this.viewSettings) {
+      return html`<div>Loading...</div>`;
+    }
+
+    return html`
+      ${mapObject(viewSettingsButtons, ([key, button]) => {
+        return html`
+          <div class="segment-group">
+            ${button.states.map((state, index) => {
+              const currentValue = this.viewSettings.get(key);
+              const isActive = currentValue === state;
+
+              return html`
+                <button
+                  class=${classMap({
+                    "segment-button": true,
+                    first: index === 0,
+                    last: index === button.states.length - 1,
+                    active: isActive,
+                  })}
+                  title=${`${key}: ${state}`}
+                  @click=${() => this.viewSettings.set(key, state)}
+                >
+                  <scad-icon
+                    icon=${button.icons[state as keyof typeof button.icons]}
+                  ></scad-icon>
+                </button>
+              `;
+            })}
+          </div>
+        `;
+      })}
+    `;
+  }
 }
 
-export class Toolbar {
-  private settings: ViewSettings;
-  private segments: Map<string, HTMLButtonElement[]> = new Map();
-
-  constructor(
-    container: HTMLElement,
-    settings: ViewSettings,
-    onSettingChange: (setting: keyof ViewSettings) => void,
-  ) {
-    this.settings = settings;
-    const toolbar = document.createElement("div");
-    toolbar.className = "toolbar-groups";
-
-    Object.entries(settingConfigs).forEach(([setting, config]) => {
-      const group = document.createElement("div");
-      group.className = "segment-group";
-
-      const buttons = this.createSegmentedButton(
-        setting as keyof ViewSettings,
-        config,
-        onSettingChange,
-      );
-
-      buttons.forEach((button) => group.appendChild(button));
-      toolbar.appendChild(group);
-      this.segments.set(setting, buttons);
-    });
-
-    container.appendChild(toolbar);
-  }
-
-  private createSegmentedButton<T extends SettingState>(
-    setting: keyof ViewSettings,
-    config: SettingConfig<T>,
-    onSettingChange: (setting: keyof ViewSettings) => void,
-  ): HTMLButtonElement[] {
-    const buttons: HTMLButtonElement[] = [];
-
-    config.states.forEach((state, index) => {
-      const button = document.createElement("button");
-      button.className = "segment-button material-symbols-outlined";
-      if (index === 0) button.classList.add("first");
-      if (index === config.states.length - 1) button.classList.add("last");
-
-      const iconKey = String(state) as IconKey<T>;
-      button.innerHTML = config.icons[iconKey];
-      button.title = `${
-        setting.charAt(0).toUpperCase() + setting.slice(1)
-      }: ${state}`;
-
-      if (this.settings[setting] === state) {
-        button.classList.add("active");
-      }
-
-      button.addEventListener("click", () => {
-        if (this.settings[setting] !== state) {
-          this.settings[setting] = state;
-          buttons.forEach((b) => b.classList.remove("active"));
-          button.classList.add("active");
-          onSettingChange(setting);
-        }
-      });
-
-      buttons.push(button);
-    });
-
-    return buttons;
-  }
+function mapObject<K extends string, V, O extends Record<K, V>, R>(
+  obj: O,
+  fn: ([key, value]: [keyof O, O[keyof O]]) => R,
+): R[] {
+  return Object.entries(obj).map(([key, value]) =>
+    fn([key as keyof O, value as O[keyof O]]),
+  );
 }

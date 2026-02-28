@@ -19,8 +19,10 @@
     "test": "node ./dist/test/runTest.js"
   },
   "dependencies": {
+    "@lit/context": "^1.1.6",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "chokidar": "^3.5.3",
+    "lit": "^3.3.2",
     "three": "^0.154.0"
   },
   "devDependencies": {
