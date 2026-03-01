@@ -69,7 +69,7 @@ export class App extends LitElement {
   @state()
   viewSettingsContext: ViewSettingsContext = {
     settings: {
-      surface: Environment.Grid,
+      environment: Environment.Grid,
       renderMode: RenderMode.Solid,
       camera: CameraMode.Perspective,
       shadows: ShadowMode.On,

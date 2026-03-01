@@ -1,29 +1,74 @@
-import { GridHelper, Group, Mesh, MeshStandardMaterial } from "three";
+import {
+  BufferGeometry,
+  GridHelper,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+} from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import buildPlate from "./assets/models/buildPlate.stl";
 import { Environment } from "../../contexts/ViewSettingsContext";
+import buildPlate from "./assets/models/buildPlate.stl";
+import { Theme } from "./Stage";
 
 export class EnvironmentRig {
   public group: Group;
-  private infiniteGrid: GridHelper;
-  private buildPlateMesh!: Mesh;
-  private buildPlateGrid!: GridHelper;
+  private infiniteGrid?: GridHelper;
+  private buildPlate?: {
+    mesh: Mesh<BufferGeometry, MeshStandardMaterial>;
+    grid: GridHelper;
+  };
 
-  constructor() {
+  constructor(
+    private environment: Environment,
+    private theme: Theme,
+  ) {
     this.group = new Group();
     this.group.name = "EnvironmentRig";
 
-    this.infiniteGrid = new GridHelper(10000, 1000, 0x888888, 0x444444);
-    this.infiniteGrid.material.depthTest = false;
-    this.group.add(this.infiniteGrid);
-
-    this.initBuildPlate();
+    if (environment === Environment.Grid) {
+      this.infiniteGrid = this.initInfiniteGrid();
+    } else if (environment === Environment.BuildPlate) {
+      this.buildPlate = this.initBuildPlate();
+    }
   }
 
-  public updateVisibility(environment: Environment) {
-    this.infiniteGrid.visible = environment === Environment.Grid;
-    this.buildPlateMesh.visible = environment === Environment.BuildPlate;
-    this.buildPlateGrid.visible = environment === Environment.BuildPlate;
+  public setTheme(theme: Theme) {
+    this.theme = theme;
+    this.redraw();
+  }
+
+  public setEnvironment(environment: Environment) {
+    this.environment = environment;
+    this.redraw();
+  }
+
+  private redraw() {
+    if (this.infiniteGrid) {
+      this.group.remove(this.infiniteGrid);
+    }
+
+    if (this.buildPlate) {
+      this.group.remove(this.buildPlate.mesh);
+      this.group.remove(this.buildPlate.grid);
+    }
+
+    if (this.environment === Environment.Grid) {
+      this.infiniteGrid = this.initInfiniteGrid();
+    } else if (this.environment === Environment.BuildPlate) {
+      this.buildPlate = this.initBuildPlate();
+    }
+  }
+
+  private initInfiniteGrid() {
+    const grid = new GridHelper(
+      10000,
+      1000,
+      this.theme.gridMajor,
+      this.theme.gridMinor,
+    );
+    grid.material.depthTest = false;
+    this.group.add(grid);
+    return grid;
   }
 
   private initBuildPlate() {
@@ -32,20 +77,27 @@ export class EnvironmentRig {
     geometry.rotateX(-Math.PI / 2);
 
     const material = new MeshStandardMaterial({
-      color: 0x403e41,
+      color: this.theme.plate,
       depthTest: false,
       fog: false,
       metalness: 0.25,
       roughness: 0.75,
     });
 
-    this.buildPlateMesh = new Mesh(geometry, material);
-    this.buildPlateMesh.receiveShadow = true;
-    this.group.add(this.buildPlateMesh);
+    const mesh = new Mesh(geometry, material);
+    mesh.receiveShadow = true;
+    this.group.add(mesh);
 
-    this.buildPlateGrid = new GridHelper(250, 25, 0x888888, 0x555555);
-    this.buildPlateGrid.material.depthTest = false;
-    this.buildPlateGrid.material.fog = false;
-    this.group.add(this.buildPlateGrid);
+    const grid = new GridHelper(
+      250,
+      25,
+      this.theme.plateGrid,
+      this.theme.plateGrid,
+    );
+    grid.material.depthTest = false;
+    (grid.material as any).fog = false;
+    this.group.add(grid);
+
+    return { mesh, grid };
   }
 }

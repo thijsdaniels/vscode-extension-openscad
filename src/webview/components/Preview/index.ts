@@ -1,12 +1,13 @@
 import { consume } from "@lit/context";
 import { css, html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { Color } from "three";
 import { modelContext, ModelContext } from "../../contexts/ModelContext";
 import {
   viewSettingsContext,
   ViewSettingsContext,
 } from "../../contexts/ViewSettingsContext";
-import { Stage } from "./Stage";
+import { Stage, Theme } from "./Stage";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -85,34 +86,46 @@ export class Preview extends LitElement {
   @query("#canvas-container")
   private container!: HTMLElement;
 
-  private stage!: Stage;
+  private stage?: Stage;
   private resizeObserver: ResizeObserver | null = null;
-  private isInitialized = false;
+  private themeObserver: MutationObserver | null = null;
+  private theme: Theme = getTheme();
 
   firstUpdated() {
-    this.stage = new Stage(this.container);
-    this.isInitialized = true;
+    this.initStage();
+    this.setupResizeObserver();
+    this.setupThemeObserver();
+  }
+
+  initStage() {
+    this.stage = new Stage(this.container, this.theme);
 
     // Process any state that arrived before initialization
     if (this.viewSettingsContext) {
       this.stage.applySettings(this.viewSettingsContext);
     }
+
     if (this.modelContext?.base64Data) {
       this.stage.loadModelData(this.modelContext);
     }
-
-    this.setupResizeHandler();
   }
 
   // Bridging the declarative Lit cycle with the imperative Three.js cycle
   updated(changedProperties: Map<string, unknown>) {
-    if (!this.isInitialized) return;
+    if (!this.stage) return;
 
     if (
       changedProperties.has("viewSettingsContext") &&
       this.viewSettingsContext
     ) {
       this.stage.applySettings(this.viewSettingsContext);
+      /**
+       * @todo I am brute forcing a rerender of the model here because the
+       * theme update causes the environment to be recreated, and since those
+       * materials no longer have depthTest set to false, the model is hidden
+       * behind the environment otherwise. We need to find a better solution.
+       */
+      this.stage.loadModelData(this.modelContext);
     }
 
     if (changedProperties.has("modelContext") && this.modelContext) {
@@ -122,17 +135,45 @@ export class Preview extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }
+
+    if (this.themeObserver) {
+      this.themeObserver.disconnect();
+    }
+
     if (this.stage) {
       this.stage.dispose();
     }
   }
 
-  private setupResizeHandler() {
+  private setupThemeObserver() {
+    this.themeObserver = new MutationObserver(() => {
+      this.theme = getTheme();
+
+      if (this.stage) {
+        this.stage.updateTheme(this.theme);
+        /**
+         * @todo I am brute forcing a rerender of the model here because the
+         * theme update causes the environment to be recreated, and since those
+         * materials no longer have depthTest set to false, the model is hidden
+         * behind the environment otherwise. We need to find a better solution.
+         */
+        this.stage.loadModelData(this.modelContext);
+      }
+    });
+
+    this.themeObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-vscode-theme"],
+    });
+  }
+
+  private setupResizeObserver() {
     this.resizeObserver = new ResizeObserver(() => {
-      if (this.container) {
+      if (this.container && this.stage) {
         this.stage.resize(
           this.container.clientWidth,
           this.container.clientHeight,
@@ -156,4 +197,51 @@ export class Preview extends LitElement {
       <div id="canvas-container"></div>
     `;
   }
+}
+
+function getTheme(): Theme {
+  const styles = getComputedStyle(document.body);
+
+  const background = new Color(
+    styles.getPropertyValue("--vscode-editor-background").trim(),
+  );
+
+  const fog = background.clone();
+
+  const gridMajor = background
+    .clone()
+    .lerp(
+      new Color(styles.getPropertyValue("--vscode-editor-foreground").trim()),
+      0.15,
+    );
+
+  const gridMinor = background
+    .clone()
+    .lerp(
+      new Color(styles.getPropertyValue("--vscode-editor-foreground").trim()),
+      0.05,
+    );
+
+  const plate = background
+    .clone()
+    .lerp(
+      new Color(styles.getPropertyValue("--vscode-button-background").trim()),
+      0.15,
+    );
+
+  const plateGrid = plate
+    .clone()
+    .lerp(
+      new Color(styles.getPropertyValue("--vscode-button-foreground").trim()),
+      0.05,
+    );
+
+  return {
+    background,
+    fog,
+    gridMajor,
+    gridMinor,
+    plate,
+    plateGrid,
+  };
 }

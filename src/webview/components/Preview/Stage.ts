@@ -9,8 +9,10 @@ import {
 } from "three";
 import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { ModelFormat } from "../../../shared/types/ModelFormat";
 import { ModelContext } from "../../contexts/ModelContext";
 import {
+  Environment,
   ShadowMode,
   ViewSettingsContext,
 } from "../../contexts/ViewSettingsContext";
@@ -19,7 +21,15 @@ import { CameraRig } from "./CameraRig";
 import { EnvironmentRig } from "./EnvironmentRig";
 import { LightRig } from "./LightRig";
 import { MaterialManager } from "./MaterialManager";
-import { ModelFormat } from "../../../shared/types/ModelFormat";
+
+export interface Theme {
+  background: Color;
+  gridMajor: Color;
+  gridMinor: Color;
+  fog: Color;
+  plate: Color;
+  plateGrid: Color;
+}
 
 export class Stage {
   private container: HTMLElement;
@@ -36,14 +46,16 @@ export class Stage {
   private viewSettings?: ViewSettingsContext;
 
   private animationFrameId: number | null = null;
+  private theme: Theme;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, theme: Theme) {
     this.container = container;
+    this.theme = theme;
 
     // 1. Initialize core Three.js graph
     this.scene = new Scene();
-    this.scene.background = new Color(0x2c2a2e);
-    this.scene.fog = new FogExp2(0x2c2a2e, 0.001);
+    this.scene.background = this.theme.background;
+    this.scene.fog = new FogExp2(this.theme.fog, 0.001);
 
     // 2. Initialize DOM Renderer
     const { clientWidth: width, clientHeight: height } = container;
@@ -56,19 +68,15 @@ export class Stage {
 
     // 3. Initialize Domain Rigs
     this.cameraRig = new CameraRig(width, height, this.renderer.domElement);
-
     this.lightRig = new LightRig();
     this.scene.add(this.lightRig.group);
-
-    this.environmentRig = new EnvironmentRig();
+    this.environmentRig = new EnvironmentRig(Environment.None, this.theme);
     this.scene.add(this.environmentRig.group);
-
     this.materialManager = new MaterialManager();
 
     // 4. Initialize specialized widgets/groups
     this.modelGroup = new Group();
     this.scene.add(this.modelGroup);
-
     this.axesWidget = new AxesWidget(container);
 
     // 5. Kickoff
@@ -79,9 +87,17 @@ export class Stage {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
     }
+
     if (this.renderer) {
       this.renderer.dispose();
     }
+  }
+
+  public updateTheme(theme: Theme) {
+    this.theme = theme;
+    this.scene.background = theme.background;
+    this.scene.fog = new FogExp2(theme.fog, 0.001);
+    this.environmentRig.setTheme(theme);
   }
 
   public resize(width: number, height: number) {
@@ -93,7 +109,7 @@ export class Stage {
   public applySettings(viewSettings: ViewSettingsContext) {
     this.viewSettings = viewSettings;
 
-    this.environmentRig.updateVisibility(viewSettings.get("surface"));
+    this.environmentRig.setEnvironment(viewSettings.get("environment"));
     this.cameraRig.setMode(viewSettings.get("camera"));
     this.renderer.shadowMap.enabled = viewSettings.is("shadows", ShadowMode.On);
     this.materialManager.applyToGroup(this.modelGroup, viewSettings);

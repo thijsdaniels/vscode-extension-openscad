@@ -28,7 +28,7 @@ export enum ColorMode {
 }
 
 export interface ViewSettings {
-  surface: Environment;
+  environment: Environment;
   renderMode: RenderMode;
   camera: CameraMode;
   shadows: ShadowMode;

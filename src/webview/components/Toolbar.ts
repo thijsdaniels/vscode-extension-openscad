@@ -35,7 +35,7 @@ const viewSettingsButtons: ViewSettingsButtons = {
     },
     defaultState: CameraMode.Perspective,
   },
-  surface: {
+  environment: {
     states: [Environment.None, Environment.Grid, Environment.BuildPlate],
     icons: {
       [Environment.None]: "grid_off",
@@ -135,11 +135,13 @@ export class PreviewToolbar extends LitElement {
     }
 
     .segment-button.first {
-      border-radius: 0.25rem 0.25rem 0 0;
+      border-top-left-radius: 0.25rem;
+      border-top-right-radius: 0.25rem;
     }
 
     .segment-button.last {
-      border-radius: 0 0 0.25rem 0.25rem;
+      border-bottom-left-radius: 0.25rem;
+      border-bottom-right-radius: 0.25rem;
       border-bottom: 1px solid var(--vscode-input-border);
     }
   `;
