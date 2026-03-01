@@ -2,6 +2,8 @@ import { consume } from "@lit/context";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
+import { ModelContext, modelContext } from "../contexts/ModelContext";
+import { PanelContext, panelContext } from "../contexts/PanelContext";
 import {
   CameraMode,
   ColorMode,
@@ -12,7 +14,7 @@ import {
   ViewSettingsContext,
   viewSettingsContext,
 } from "../contexts/ViewSettingsContext";
-import "./Icon";
+import "./MaterialSymbol";
 
 interface ToolbarButton<T extends string> {
   states: T[];
@@ -74,20 +76,34 @@ export class PreviewToolbar extends LitElement {
   static styles = css`
     :host {
       display: flex;
-      gap: 0.5rem;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem;
+      background: var(--vscode-panel-background);
+      border-right: 1px solid var(--vscode-panel-border);
     }
 
-    .segment-group {
+    .toolbar-section {
       display: flex;
-      margin: 0 4px;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .toolbar-segment {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .segment-button {
       border: 1px solid var(--vscode-input-border);
-      border-right: none;
+      border-bottom: none;
       background: transparent;
-      color: #888;
-      padding: 4px 8px;
+      color: var(--vscode-toolbar-foreground);
+      padding: 0.25rem;
       font-size: 1rem;
       cursor: pointer;
       display: flex;
@@ -95,8 +111,17 @@ export class PreviewToolbar extends LitElement {
       justify-content: center;
     }
 
+    .segment-button.primary {
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+    }
+
     .segment-button:hover {
       background: var(--vscode-toolbar-hoverBackground);
+    }
+
+    .segment-button.primary:hover {
+      background: var(--vscode-button-hoverBackground);
     }
 
     .segment-button.active {
@@ -104,53 +129,106 @@ export class PreviewToolbar extends LitElement {
       color: var(--vscode-toolbar-activeForeground);
     }
 
+    .segment-button.primary.active {
+      background: var(--vscode-button-activeBackground);
+      color: var(--vscode-button-activeForeground);
+    }
+
     .segment-button.first {
-      border-radius: 4px 0 0 4px;
+      border-radius: 0.25rem 0.25rem 0 0;
     }
 
     .segment-button.last {
-      border-radius: 0 4px 4px 0;
-      border-right: 1px solid var(--vscode-input-border);
+      border-radius: 0 0 0.25rem 0.25rem;
+      border-bottom: 1px solid var(--vscode-input-border);
     }
   `;
+
+  @consume({ context: panelContext, subscribe: true })
+  @state()
+  panelContext!: PanelContext;
 
   @consume({ context: viewSettingsContext, subscribe: true })
   @state()
   viewSettings!: ViewSettingsContext;
 
+  @consume({ context: modelContext, subscribe: true })
+  @state()
+  modelContext!: ModelContext;
+
   render() {
-    if (!this.viewSettings) {
-      return html`<div>Loading...</div>`;
-    }
-
     return html`
-      ${mapObject(viewSettingsButtons, ([key, button]) => {
-        return html`
-          <div class="segment-group">
-            ${button.states.map((state, index) => {
-              const currentValue = this.viewSettings.get(key);
-              const isActive = currentValue === state;
-
-              return html`
-                <button
-                  class=${classMap({
-                    "segment-button": true,
-                    first: index === 0,
-                    last: index === button.states.length - 1,
-                    active: isActive,
-                  })}
-                  title=${`${key}: ${state}`}
-                  @click=${() => this.viewSettings.set(key, state)}
-                >
-                  <scad-icon
-                    icon=${button.icons[state as keyof typeof button.icons]}
-                  ></scad-icon>
-                </button>
-              `;
+      <toolbar-section>
+        <div class="toolbar-segment">
+          <button
+            class=${classMap({
+              "segment-button": true,
+              primary: true,
+              first: true,
+              last: true,
             })}
-          </div>
-        `;
-      })}
+            title="Export"
+            @click=${() => this.modelContext.export()}
+          >
+            <material-symbol name="file_save"></material-symbol>
+          </button>
+        </div>
+      </toolbar-section>
+      <div class="toolbar-section">
+        ${mapObject(viewSettingsButtons, ([key, button]) => {
+          return html`
+            <div class="toolbar-segment">
+              ${button.states.map((state, index) => {
+                const currentValue = this.viewSettings.get(key);
+                const isActive = currentValue === state;
+
+                return html`
+                  <button
+                    class=${classMap({
+                      "segment-button": true,
+                      first: index === 0,
+                      last: index === button.states.length - 1,
+                      active: isActive,
+                    })}
+                    title=${`${key}: ${state}`}
+                    @click=${() => this.viewSettings.set(key, state)}
+                  >
+                    <material-symbol
+                      name=${button.icons[state as keyof typeof button.icons]}
+                    ></material-symbol>
+                  </button>
+                `;
+              })}
+            </div class="toolbar-segment">
+          `;
+        })}
+      </div>
+      <div class="toolbar-section">
+        <div class="toolbar-segment">
+          <button
+            class=${classMap({
+              "segment-button": true,
+              first: true,
+              active: this.panelContext.panels.parameters,
+            })}
+            title="Toggle Right Panel"
+            @click=${() => this.panelContext.toggle("parameters")}
+          >
+            <material-symbol name="settings"></material-symbol>
+          </button>
+          <button
+            class=${classMap({
+              "segment-button": true,
+              last: true,
+              active: this.panelContext.panels.debug,
+            })}
+            title="Toggle Bottom Panel"
+            @click=${() => this.panelContext.toggle("debug")}
+          >
+            <material-symbol name="code"></material-symbol>
+          </button>
+        </div>
+      </div>
     `;
   }
 }

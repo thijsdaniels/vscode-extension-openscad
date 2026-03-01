@@ -2,18 +2,17 @@ import {
   Disposable,
   ProgressLocation,
   Uri,
+  Webview,
   WebviewPanel,
   window,
   workspace,
 } from "vscode";
-import {
-  ExtensionToWebviewMessage,
-  WebviewToExtensionMessage,
-} from "../../shared/types/messages";
-import { OpenScadSession } from "../core/OpenScadSession";
-import { getWebviewHtml } from "./getWebviewHtml";
+import { ExtensionToWebviewMessage } from "../../shared/types/ExtensionToWebviewMessage";
+import { ModelFormat } from "../../shared/types/ModelFormat";
+import { WebviewToExtensionMessage } from "../../shared/types/WebviewToExtensionMessage";
+import { ScadSession } from "../core/ScadSession";
 
-export class ScadPreviewPanel {
+export class ScadWebviewPanel {
   private readonly panel: WebviewPanel;
   private disposables: Disposable[] = [];
   private isWebviewReady: boolean = false;
@@ -21,7 +20,7 @@ export class ScadPreviewPanel {
   constructor(
     panel: WebviewPanel,
     private readonly extensionUri: Uri,
-    private readonly session: OpenScadSession,
+    private readonly session: ScadSession,
   ) {
     this.panel = panel;
 
@@ -31,12 +30,16 @@ export class ScadPreviewPanel {
       localResourceRoots: [
         Uri.joinPath(extensionUri, "dist"),
         Uri.joinPath(extensionUri, "node_modules", "three"),
+        Uri.joinPath(extensionUri, "node_modules", "@vscode", "codicons"),
         Uri.joinPath(extensionUri, "src", "webview"),
       ],
     };
 
     // Set initial HTML content
-    this.panel.webview.html = getWebviewHtml(this.panel.webview, extensionUri);
+    this.panel.webview.html = this.getWebviewHtml(
+      this.panel.webview,
+      extensionUri,
+    );
 
     // Handle messages from the webview
     this.panel.webview.onDidReceiveMessage(
@@ -114,6 +117,61 @@ export class ScadPreviewPanel {
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
   }
 
+  private getWebviewHtml(webview: Webview, extensionUri: Uri): string {
+    // Get path to compiled preview script
+    const scriptUri = webview.asWebviewUri(
+      Uri.joinPath(extensionUri, "dist", "webview.js"),
+    );
+
+    const codiconUri = webview.asWebviewUri(
+      Uri.joinPath(
+        extensionUri,
+        "node_modules",
+        "@vscode",
+        "codicons",
+        "dist",
+        "codicon.css",
+      ),
+    );
+
+    return /* html */ `
+		<!DOCTYPE html>
+		<html>
+			<head>
+				<meta charset="UTF-8" />
+				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+				<title>OpenSCAD Preview</title>
+				<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+        <link rel="stylesheet" href="${codiconUri}" id="vscode-codicon-stylesheet">
+				<style>
+					body { 
+						margin: 0; 
+						padding: 0;
+						height: 100vh;
+						display: flex;
+						flex-direction: column;
+						overflow: hidden;
+						background-color: var(--vscode-editor-background);
+						color: var(--vscode-foreground);
+						font-family: var(--vscode-font-family);
+						font-size: var(--vscode-font-size);
+					}
+					#root {
+						flex: 1;
+						display: flex;
+						overflow: hidden;
+						height: 100%;
+					}
+				</style>
+			</head>
+			<body>
+				<div id="root"></div>
+				<script src="${scriptUri}" type="module"></script>
+			</body>
+		</html>
+	`;
+  }
+
   private pushInitialState() {
     // Send initial preview data if it already rendered
     const lastData = this.session.lastPreviewData;
@@ -138,31 +196,40 @@ export class ScadPreviewPanel {
   }
 
   private async exportModel() {
-    const format = await window.showQuickPick(["3mf", "stl"], {
-      title: "Select Export Format",
-      placeHolder:
-        "Choose 3D model format to export (3MF for colors, STL for geometry)",
-    });
+    const format = await window.showQuickPick(
+      [
+        {
+          value: ModelFormat.ThreeMF,
+          label: "3MF",
+          description: "Supports colors but requires OpenSCAD Nightly.",
+        },
+        {
+          value: ModelFormat.STL,
+          label: "STL",
+          description: "Universally supported.",
+        },
+      ] as const,
+      {
+        title: "Select Export Format",
+      },
+    );
 
     if (!format) {
       return; // User cancelled
     }
 
     const defaultUri = Uri.file(
-      this.session.documentUri.fsPath.replace(/\.scad$/i, `.${format}`),
+      this.session.documentUri.fsPath.replace(/\.scad$/i, `.${format.value}`),
     );
 
-    const filters: { [name: string]: string[] } = {};
-    if (format === "3mf") {
-      filters["3MF Files"] = ["3mf"];
-    } else {
-      filters["STL Files"] = ["stl"];
-    }
+    const filters = {
+      [format.label]: [format.value],
+    };
 
     const uri = await window.showSaveDialog({
       defaultUri,
       filters,
-      title: `Export ${format.toUpperCase()}`,
+      title: `Export ${format.label}`,
     });
 
     if (uri) {
@@ -171,24 +238,20 @@ export class ScadPreviewPanel {
         await window.withProgress(
           {
             location: ProgressLocation.Notification,
-            title: `Rendering ${format.toUpperCase()}...`,
+            title: `Rendering ${format.label}...`,
             cancellable: false,
           },
           async () => {
-            const buffer = await this.session.exportFormat(
-              format as "3mf" | "stl",
-            );
+            const buffer = await this.session.exportFormat(format.value);
             await workspace.fs.writeFile(uri, new Uint8Array(buffer));
           },
         );
 
         window.showInformationMessage(
-          `Successfully exported ${format.toUpperCase()} to ${uri.fsPath}`,
+          `Successfully exported ${format.label} to ${uri.fsPath}`,
         );
       } catch (error) {
-        window.showErrorMessage(
-          `Failed to export ${format.toUpperCase()}: ${error}`,
-        );
+        window.showErrorMessage(`Failed to export ${format.label}: ${error}`);
       }
     }
   }

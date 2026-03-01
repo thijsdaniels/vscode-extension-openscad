@@ -1,10 +1,10 @@
 import { ExtensionContext, window } from "vscode";
 import { registerShowPanelCommand } from "./commands/showPanel";
-import { OpenScadSessionManager } from "./core/OpenScadSessionManager";
-import { OpenScadCli } from "./services/OpenScadCli";
+import { ScadSessionManager } from "./core/ScadSessionManager";
+import { ScadCli } from "./services/ScadCli";
 import { ScadParser } from "./services/ScadParser";
 
-let sessionManager: OpenScadSessionManager | undefined;
+let sessionManager: ScadSessionManager | undefined;
 
 export function activate(context: ExtensionContext) {
   // 1. Initialize global utilities (Dependency Injection roots)
@@ -12,11 +12,11 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(logger);
 
   // 2. Instantiate global services
-  const cli = new OpenScadCli(logger);
+  const cli = new ScadCli(logger);
   const parser = new ScadParser(logger);
 
   // 3. Create the centralized Session Manager
-  sessionManager = new OpenScadSessionManager(cli, parser, logger);
+  sessionManager = new ScadSessionManager(cli, parser, logger);
 
   // 4. Register Commands
   const showPanelDisposable = registerShowPanelCommand(context, sessionManager);

@@ -1,8 +1,9 @@
 import { provide } from "@lit/context";
-import { css, html, LitElement } from "lit";
+import { css, html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { ExtensionToWebviewMessage } from "../../shared/types/messages";
-import { modelContext, ModelState } from "../contexts/ModelContext";
+import { ExtensionToWebviewMessage } from "../../shared/types/ExtensionToWebviewMessage";
+import { modelContext, ModelContext } from "../contexts/ModelContext";
+import { PanelContext, panelContext } from "../contexts/PanelContext";
 import {
   parameterContext,
   ParameterContext,
@@ -17,9 +18,19 @@ import {
   ViewSettingsContext,
 } from "../contexts/ViewSettingsContext";
 import { bridge } from "../services/Bridge";
+import "./Debug";
+import "./Parameters";
+import "./Preview";
+import "./Toolbar";
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "scad-app": App;
+  }
+}
 
 @customElement("scad-app")
-export class PreviewApp extends LitElement {
+export class App extends LitElement {
   static styles = css`
     :host {
       display: flex;
@@ -27,71 +38,36 @@ export class PreviewApp extends LitElement {
       height: 100vh;
       width: 100vw;
       overflow: hidden;
-      background-color: var(--vscode-editor-background);
-      color: var(--vscode-editor-foreground);
-    }
-
-    .main-content {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-      position: relative;
-    }
-
-    #toolbar-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--vscode-panel-background);
-      padding: 0.25rem;
-      border-bottom: 1px solid var(--vscode-panel-border);
-    }
-
-    .icon-button {
-      background: none;
-      border: none;
-      color: var(--vscode-foreground);
-      padding: 0.5rem;
-      border-radius: 0.25rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .icon-button:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-
-    .icon-button.active {
-      background: var(--vscode-toolbar-activeBackground);
-      color: var(--vscode-toolbar-activeForeground);
-    }
-
-    /* We need to import the font inside the shadow DOM for the icons to work */
-    @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
-    .material-symbols-outlined {
-      font-family: "Material Symbols Outlined";
-      font-weight: normal;
-      font-style: normal;
-      line-height: 1;
-      letter-spacing: normal;
-      text-transform: none;
-      display: inline-block;
-      white-space: nowrap;
-      word-wrap: normal;
-      direction: ltr;
-      -webkit-font-feature-settings: "liga";
-      -webkit-font-smoothing: antialiased;
+      background-color: var(--vscode-panel-background);
+      color: var(--vscode-panel-foreground);
     }
   `;
 
+  @provide({ context: panelContext })
   @state()
-  private isParametersVisible: boolean = true;
+  private panelContext: PanelContext = {
+    panels: {
+      toolbar: true,
+      parameters: true,
+      debug: false,
+    },
+    toggle: (panel: keyof PanelContext["panels"]) => {
+      this.panelContext = {
+        ...this.panelContext,
+        panels: {
+          ...this.panelContext.panels,
+          [panel]: !this.panelContext.panels[panel],
+        },
+      };
+    },
+  };
+
+  @state() private parameterPanelSize: string = `${window.innerWidth - 240}px`;
+  @state() private debugPanelSize: string = `${window.innerHeight - 240}px`;
 
   @provide({ context: viewSettingsContext })
   @state()
-  viewSettings: ViewSettingsContext = {
+  viewSettingsContext: ViewSettingsContext = {
     settings: {
       surface: Environment.Grid,
       renderMode: RenderMode.Solid,
@@ -99,13 +75,13 @@ export class PreviewApp extends LitElement {
       shadows: ShadowMode.On,
       colors: ColorMode.On,
     },
-    get: (key) => this.viewSettings.settings[key],
-    is: (key, value) => this.viewSettings.settings[key] === value,
+    get: (key) => this.viewSettingsContext.settings[key],
+    is: (key, value) => this.viewSettingsContext.settings[key] === value,
     set: (key, value) => {
-      this.viewSettings = {
-        ...this.viewSettings,
+      this.viewSettingsContext = {
+        ...this.viewSettingsContext,
         settings: {
-          ...this.viewSettings.settings,
+          ...this.viewSettingsContext.settings,
           [key]: value,
         },
       };
@@ -114,10 +90,11 @@ export class PreviewApp extends LitElement {
 
   @provide({ context: parameterContext })
   @state()
-  parameterState: ParameterContext = {
+  parameterContext: ParameterContext = {
     parameters: [],
     overrides: {},
-    get: (name) => this.parameterState.parameters.find((p) => p.name === name),
+    get: (name) =>
+      this.parameterContext.parameters.find((p) => p.name === name),
     override: (name, value) => {
       bridge.updateParameterOverride(name, value?.toString());
     },
@@ -128,35 +105,33 @@ export class PreviewApp extends LitElement {
 
   @provide({ context: modelContext })
   @state()
-  modelState: ModelState = {
+  modelContext: ModelContext = {
     format: null,
     base64Data: null,
-    exportModel: () => bridge.exportModel(),
+    export: bridge.exportModel,
   };
 
-  private unsubscribeMessage: (() => void) | null = null;
+  private unsubscribe: (() => void) | null = null;
 
   connectedCallback() {
     super.connectedCallback();
-    this.unsubscribeMessage = bridge.onMessage(this.handleMessage);
+    this.unsubscribe = bridge.onMessage(this.handleMessage);
     bridge.ready();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    if (this.unsubscribeMessage) {
-      this.unsubscribeMessage();
-    }
+    this.unsubscribe?.();
   }
 
   private handleMessage = (message: ExtensionToWebviewMessage) => {
     switch (message.type) {
       case "update":
         if (message.content) {
-          this.modelState = {
-            format: message.format === "3mf" ? "3mf" : "stl",
+          this.modelContext = {
+            ...this.modelContext,
+            format: message.format,
             base64Data: message.content,
-            exportModel: () => bridge.exportModel(),
           };
         } else {
           bridge.reportError("No content in update message");
@@ -164,8 +139,8 @@ export class PreviewApp extends LitElement {
         break;
       case "updateParameters":
         if (message.parameters) {
-          this.parameterState = {
-            ...this.parameterState,
+          this.parameterContext = {
+            ...this.parameterContext,
             parameters: message.parameters,
             overrides: message.overrides || {},
           };
@@ -176,32 +151,77 @@ export class PreviewApp extends LitElement {
     }
   };
 
-  private toggleParameters() {
-    this.isParametersVisible = !this.isParametersVisible;
-  }
-
   render() {
     return html`
-      <div id="toolbar-container">
+      ${this.withBottomPanel(
+        this.withRightPanel(
+          this.renderPreviewWithToolbar(),
+          this.panelContext.panels.parameters
+            ? html`<scad-parameters></scad-parameters>`
+            : null,
+        ),
+        this.panelContext.panels.debug ? html`<scad-debug></scad-debug>` : null,
+      )}
+    `;
+  }
+
+  private withBottomPanel(main: TemplateResult, bottom: TemplateResult | null) {
+    if (!bottom) {
+      return main;
+    }
+
+    return html`
+      <vscode-split-layout
+        style="width: 100%; height: 100%; --separator-border: transparent; border: none;"
+        split="horizontal"
+        fixed="end"
+        handle-position=${this.debugPanelSize}
+        @vsc-split-layout-change=${(e: CustomEvent) =>
+          this.handleResize("bottom", e)}
+      >
+        <div slot="start">${main}</div>
+        <div slot="end">${bottom}</div>
+      </vscode-split-layout>
+    `;
+  }
+
+  private withRightPanel(main: TemplateResult, right: TemplateResult | null) {
+    if (!right) {
+      return main;
+    }
+
+    return html`
+      <vscode-split-layout
+        style="width: 100%; height: 100%; --separator-border: transparent; border: none;"
+        split="vertical"
+        fixed="end"
+        handle-position=${this.parameterPanelSize}
+        @vsc-split-layout-change=${(e: CustomEvent) =>
+          this.handleResize("right", e)}
+      >
+        <div slot="start">${main}</div>
+        <div slot="end">${right}</div>
+      </vscode-split-layout>
+    `;
+  }
+
+  private renderPreviewWithToolbar() {
+    if (!this.panelContext.panels.toolbar) {
+      return html`<scad-preview></scad-preview>`;
+    }
+
+    return html`
+      <div style="display: flex; height: 100%;">
         <scad-toolbar></scad-toolbar>
-        <button
-          id="toggle-parameters"
-          class="icon-button material-symbols-outlined ${this
-            .isParametersVisible
-            ? "active"
-            : ""}"
-          title="Toggle Parameters"
-          @click=${this.toggleParameters}
-        >
-          view_sidebar
-        </button>
-      </div>
-      <div class="main-content">
-        <scad-canvas></scad-canvas>
-        <scad-parameter-controls
-          style="display: ${this.isParametersVisible ? "flex" : "none"}"
-        ></scad-parameter-controls>
+        <scad-preview></scad-preview>
       </div>
     `;
+  }
+
+  private handleResize(panel: "right" | "bottom", e: CustomEvent) {
+    if (!e.detail) return;
+    const size = `${e.detail.position}px`;
+    if (panel === "right") this.parameterPanelSize = size;
+    if (panel === "bottom") this.debugPanelSize = size;
   }
 }

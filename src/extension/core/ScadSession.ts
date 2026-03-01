@@ -1,6 +1,7 @@
 import { EventEmitter, OutputChannel, Uri } from "vscode";
-import { ScadParameter } from "../../shared/types/parameters";
-import { OpenScadCli } from "../services/OpenScadCli";
+import { ModelFormat } from "../../shared/types/ModelFormat";
+import { ScadParameter } from "../../shared/types/ScadParameter";
+import { ScadCli } from "../services/ScadCli";
 import { ScadParser } from "../services/ScadParser";
 import { ScadWatcher } from "../services/ScadWatcher";
 import { ScadParameters } from "./ScadParameters";
@@ -9,22 +10,22 @@ import { ScadParameters } from "./ScadParameters";
  * Represents a single SCAD document session.
  * Decouples the file watching and parameter parsing from any specific Webview Panel UI.
  */
-export class OpenScadSession {
+export class ScadSession {
   private scadWatcher: ScadWatcher;
   private scadParameters: ScadParameters;
   private _lastPreviewData: Buffer | undefined;
-  private _lastPreviewFormat: "3mf" | "stl" = "3mf";
+  private _lastPreviewFormat: ModelFormat = ModelFormat.ThreeMF;
 
   // Events that Views can subscribe to
   private _onPreviewUpdated = new EventEmitter<{
     buffer: Buffer;
-    format: "3mf" | "stl";
+    format: ModelFormat;
   }>();
   public readonly onPreviewUpdated = this._onPreviewUpdated.event;
 
   private _onParametersUpdated = new EventEmitter<{
     parameters: ScadParameter[];
-    overrides: Record<string, any>;
+    overrides: Record<string, string | number | boolean>;
   }>();
   public readonly onParametersUpdated = this._onParametersUpdated.event;
 
@@ -33,7 +34,7 @@ export class OpenScadSession {
 
   constructor(
     public readonly documentUri: Uri,
-    private readonly cli: OpenScadCli,
+    private readonly cli: ScadCli,
     parser: ScadParser,
     logger: OutputChannel,
   ) {
@@ -71,7 +72,7 @@ export class OpenScadSession {
   }
 
   public get lastPreviewData():
-    | { buffer: Buffer; format: "3mf" | "stl" }
+    | { buffer: Buffer; format: ModelFormat }
     | undefined {
     if (!this._lastPreviewData) return undefined;
     return { buffer: this._lastPreviewData, format: this._lastPreviewFormat };
@@ -81,11 +82,14 @@ export class OpenScadSession {
     return this.scadParameters.getParameters();
   }
 
-  public get currentOverrides(): Record<string, any> {
+  public get currentOverrides(): Record<string, string | number | boolean> {
     return this.scadParameters.getOverrides();
   }
 
-  public updateParameterValue(name: string, value: any) {
+  public updateParameterValue(
+    name: string,
+    value: string | number | boolean | undefined,
+  ) {
     this.scadParameters.updateValue(name, value);
     this._onParametersUpdated.fire({
       parameters: this.scadParameters.getParameters(),
@@ -93,7 +97,7 @@ export class OpenScadSession {
     });
   }
 
-  public async exportFormat(format: "3mf" | "stl"): Promise<Buffer> {
+  public async exportFormat(format: ModelFormat): Promise<Buffer> {
     return this.cli.render(
       this.documentUri.fsPath,
       this.scadParameters.getParameterArgs(),

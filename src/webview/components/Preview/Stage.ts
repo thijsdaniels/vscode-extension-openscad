@@ -9,7 +9,7 @@ import {
 } from "three";
 import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import { ModelState } from "../../contexts/ModelContext";
+import { ModelContext } from "../../contexts/ModelContext";
 import {
   ShadowMode,
   ViewSettingsContext,
@@ -19,6 +19,7 @@ import { CameraRig } from "./CameraRig";
 import { EnvironmentRig } from "./EnvironmentRig";
 import { LightRig } from "./LightRig";
 import { MaterialManager } from "./MaterialManager";
+import { ModelFormat } from "../../../shared/types/ModelFormat";
 
 export class Stage {
   private container: HTMLElement;
@@ -98,7 +99,7 @@ export class Stage {
     this.materialManager.applyToGroup(this.modelGroup, viewSettings);
   }
 
-  public loadModelData(modelState: ModelState) {
+  public loadModelData(modelState: ModelContext) {
     const { format, base64Data } = modelState;
     if (!base64Data || !format) return;
 
@@ -110,7 +111,7 @@ export class Stage {
 
     this.modelGroup.clear();
 
-    if (format === "3mf") {
+    if (format === ModelFormat.ThreeMF) {
       const loader = new ThreeMFLoader();
       try {
         const group = loader.parse(bytes.buffer);

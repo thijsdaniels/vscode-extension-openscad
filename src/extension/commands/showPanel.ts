@@ -6,15 +6,15 @@ import {
   ViewColumn,
   window,
 } from "vscode";
-import { OpenScadSessionManager } from "../core/OpenScadSessionManager";
-import { ScadPreviewPanel } from "../views/ScadPreviewPanel";
+import { ScadSessionManager } from "../core/ScadSessionManager";
+import { ScadWebviewPanel } from "../views/ScadWebviewPanel";
 
 // Keep track of active panels by URI to avoid opening duplicates
-const activePanels = new Map<string, ScadPreviewPanel>();
+const activePanels = new Map<string, ScadWebviewPanel>();
 
 export function registerShowPanelCommand(
   context: ExtensionContext,
-  sessionManager: OpenScadSessionManager,
+  sessionManager: ScadSessionManager,
 ): Disposable {
   return commands.registerCommand("openscad.showPanel", () => {
     const editor = window.activeTextEditor;
@@ -53,7 +53,7 @@ export function registerShowPanelCommand(
     );
 
     // Instantiate our controller wrapper
-    const scadPreviewPanel = new ScadPreviewPanel(
+    const scadPreviewPanel = new ScadWebviewPanel(
       webviewPanel,
       context.extensionUri,
       session,

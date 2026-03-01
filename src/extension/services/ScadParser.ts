@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import { OutputChannel } from "vscode";
-import { ScadParameter } from "../../shared/types/parameters";
+import { ScadParameter } from "../../shared/types/ScadParameter";
 
 export class ScadParser {
   constructor(private logger: OutputChannel) {}
@@ -48,7 +48,7 @@ export class ScadParser {
         if (varMatch) {
           const [, name, valueStr] = varMatch;
           let type: "number" | "boolean" | "string";
-          let value: any;
+          let value: string | number | boolean;
 
           // Skip if we're in a Hidden group (case insensitive)
           if (currentGroup.toLowerCase() === "hidden") {
@@ -72,8 +72,7 @@ export class ScadParser {
             type,
             group: currentGroup || undefined,
             value,
-            default: valueStr,
-          });
+          } as ScadParameter);
         }
       }
 

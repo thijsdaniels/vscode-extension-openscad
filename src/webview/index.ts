@@ -1,20 +1,6 @@
-import {
-  provideVSCodeDesignSystem,
-  vsCodeButton,
-  vsCodeCheckbox,
-  vsCodeTextField,
-} from "@vscode/webview-ui-toolkit";
+import "@vscode-elements/elements";
 import "./components/App";
-import "./components/Parameters";
-import "./components/Preview";
-import "./components/Toolbar";
 import { bridge } from "./services/Bridge";
-
-provideVSCodeDesignSystem().register(
-  vsCodeCheckbox(),
-  vsCodeTextField(),
-  vsCodeButton(),
-);
 
 window.addEventListener("load", () => {
   const root = document.getElementById("root");

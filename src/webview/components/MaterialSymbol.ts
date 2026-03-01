@@ -1,26 +1,15 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-// Export the supported icons as a union type for strong typing
-export type SupportedIcon =
-  | "visibility"
-  | "deployed_code"
-  | "grid_off"
-  | "grid_on"
-  | "square"
-  | "texture"
-  | "opacity"
-  | "language"
-  | "palette"
-  | "format_color_reset"
-  | "circle"
-  | "ev_shadow"
-  | "view_sidebar"
-  | "undo";
+declare global {
+  interface HTMLElementTagNameMap {
+    "material-symbol": MaterialSymbol;
+  }
+}
 
-@customElement("scad-icon")
-export class ScadIcon extends LitElement {
-  @property({ type: String }) icon: SupportedIcon | string = "";
+@customElement("material-symbol")
+export class MaterialSymbol extends LitElement {
+  @property({ type: String }) name!: string;
 
   static styles = css`
     :host {
@@ -33,6 +22,7 @@ export class ScadIcon extends LitElement {
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200");
     .material-symbols-outlined {
       font-family: "Material Symbols Outlined";
+      font-size: 1rem;
       font-weight: normal;
       font-style: normal;
       line-height: 1;
@@ -48,6 +38,6 @@ export class ScadIcon extends LitElement {
   `;
 
   render() {
-    return html` <span class="material-symbols-outlined">${this.icon}</span> `;
+    return html` <span class="material-symbols-outlined">${this.name}</span> `;
   }
 }

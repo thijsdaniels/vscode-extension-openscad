@@ -1,23 +1,27 @@
-import { LitElement, html, css, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import { consume } from "@lit/context";
+import { css, html, LitElement, nothing } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { ScadParameter } from "../../shared/types/ScadParameter";
 import {
   parameterContext,
   ParameterContext,
 } from "../contexts/ParameterContext";
-import { modelContext, ModelState } from "../contexts/ModelContext";
-import { ScadParameter } from "../../shared/types/parameters";
-import "./Icon";
+import "./MaterialSymbol";
 
-@customElement("scad-parameter-controls")
-export class ParameterControls extends LitElement {
-  static styles = css`
+declare global {
+  interface HTMLElementTagNameMap {
+    "scad-parameters": Parameters;
+  }
+}
+
+@customElement("scad-parameters")
+export class Parameters extends LitElement {
+  public static styles = css`
     :host {
       display: flex;
       flex-direction: column;
-      width: 240px;
       height: 100%;
-      background: var(--vscode-sideBar-background);
+      background: var(--vscode-panel-background);
       border-left: 1px solid var(--vscode-panel-border);
       flex-shrink: 0;
     }
@@ -55,70 +59,118 @@ export class ParameterControls extends LitElement {
 
     .parameter label {
       font-size: 12px;
+      width: 50%;
     }
 
     .input-container {
+      width: 50%;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    vscode-text-field {
+    vscode-textfield {
       width: 100%;
-    }
-
-    .button.revert {
-      cursor: pointer;
-      color: var(--vscode-descriptionForeground);
-      opacity: 0.6;
-      transition: opacity 0.2s ease;
-    }
-
-    .button.revert:hover {
-      opacity: 1;
-      color: var(--vscode-foreground);
     }
   `;
 
+  @property({ type: Boolean })
+  public open = false;
+
   @consume({ context: parameterContext, subscribe: true })
   @state()
-  parameterState!: ParameterContext;
+  private parameterContext!: ParameterContext;
 
-  @consume({ context: modelContext, subscribe: true })
-  @state()
-  modelState!: ModelState;
+  public render() {
+    const { parameters, overrides } = this.parameterContext;
+
+    const groups = this.groupParameters(parameters);
+
+    return html`
+      <div class="parameters">
+        ${Array.from(groups.entries()).map(
+          ([groupName, parameters]) => html`
+            <div class="parameter-group">
+              <h3>${groupName}</h3>
+              ${parameters.map((parameter) => {
+                const isOverridden = parameter.name in overrides;
+                const currentValue = isOverridden
+                  ? overrides[parameter.name]
+                  : parameter.value;
+
+                return html`
+                  <div class="parameter">
+                    <label>
+                      ${this.formatParameterName(parameter.name, groupName)}
+                    </label>
+                    <div class="input-container">
+                      ${this.renderInput(parameter, currentValue)}
+                      ${isOverridden
+                        ? html`
+                            <vscode-toolbar-button
+                              icon="discard"
+                              title="Revert"
+                              @click=${() =>
+                                this.handleInputChange(
+                                  parameter.name,
+                                  undefined,
+                                )}
+                            ></vscode-toolbar-button>
+                          `
+                        : nothing}
+                    </div>
+                  </div>
+                `;
+              })}
+            </div>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  private groupParameters(parameters: ScadParameter[]) {
+    const groups = new Map<string, ScadParameter[]>();
+
+    parameters.forEach((parameter) => {
+      const group = parameter.group || "Parameters";
+
+      if (!groups.has(group)) {
+        groups.set(group, []);
+      }
+
+      groups.get(group)?.push(parameter);
+    });
+
+    return groups;
+  }
 
   private formatParameterName(paramName: string, groupName: string): string {
-    const words = paramName
+    const name = paramName
       .replace(/_/g, " ")
       .replace(/([A-Z])/g, " $1")
       .trim()
       .replace(/\s+/g, " ")
-      .split(" ");
+      .replace(new RegExp(`^${groupName}`, "i"), "");
 
-    if (
-      words.length > 1 &&
-      words[0].toLowerCase() === groupName.toLowerCase()
-    ) {
-      words.shift();
-    }
-
-    return words
+    return name
+      .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   }
 
   private handleInputChange(name: string, value: unknown) {
-    if (this.parameterState.override) {
-      this.parameterState.override(name, value as string);
+    if (this.parameterContext.override) {
+      this.parameterContext.override(name, value as string);
     }
   }
 
-  private renderInput(param: ScadParameter, currentValue: any) {
+  private renderInput(param: ScadParameter, currentValue: unknown) {
     switch (param.type) {
       case "boolean":
         return html`
           <vscode-checkbox
+            toggle
             .checked=${currentValue}
             @change=${(e: Event) =>
               this.handleInputChange(
@@ -129,7 +181,7 @@ export class ParameterControls extends LitElement {
         `;
       case "number":
         return html`
-          <vscode-text-field
+          <vscode-textfield
             size="3"
             .value=${currentValue?.toString()}
             @change=${(e: Event) =>
@@ -137,11 +189,11 @@ export class ParameterControls extends LitElement {
                 param.name,
                 parseFloat((e.target as HTMLInputElement).value),
               )}
-          ></vscode-text-field>
+          ></vscode-textfield>
         `;
       case "string":
         return html`
-          <vscode-text-field
+          <vscode-textfield
             size="3"
             .value=${currentValue}
             @change=${(e: Event) =>
@@ -149,85 +201,10 @@ export class ParameterControls extends LitElement {
                 param.name,
                 (e.target as HTMLInputElement).value,
               )}
-          ></vscode-text-field>
+          ></vscode-textfield>
         `;
       default:
         return nothing;
     }
-  }
-
-  private handleExport() {
-    this.modelState?.exportModel?.();
-  }
-
-  render() {
-    if (!this.parameterState || !this.parameterState.parameters.length) {
-      return html`
-        <div class="parameters"><div>No parameters available.</div></div>
-        <div class="export-container">
-          <vscode-button style="width: 100%" @click=${this.handleExport}
-            >Export Model</vscode-button
-          >
-        </div>
-      `;
-    }
-
-    const { parameters, overrides } = this.parameterState;
-    const groups = new Map<string, ScadParameter[]>();
-
-    parameters.forEach((param) => {
-      // Cast parameter to the more complete shared type
-      const scadParam = param as unknown as ScadParameter;
-      const group = scadParam.group || "Parameters";
-      if (!groups.has(group)) {
-        groups.set(group, []);
-      }
-      groups.get(group)?.push(scadParam);
-    });
-
-    return html`
-      <div class="parameters">
-        ${Array.from(groups.entries()).map(
-          ([groupName, params]) => html`
-            <div class="parameter-group">
-              <h3>${groupName}</h3>
-              ${params.map((param) => {
-                const isOverridden = param.name in overrides;
-                const currentValue = isOverridden
-                  ? overrides[param.name]
-                  : param.value;
-
-                return html`
-                  <div class="parameter">
-                    <label
-                      >${this.formatParameterName(param.name, groupName)}</label
-                    >
-                    <div class="input-container">
-                      ${isOverridden
-                        ? html`
-                            <scad-icon
-                              class="button revert"
-                              icon="undo"
-                              title="Revert to default: ${param.value}"
-                              @click=${() =>
-                                this.handleInputChange(param.name, undefined)}
-                            ></scad-icon>
-                          `
-                        : nothing}
-                      ${this.renderInput(param, currentValue)}
-                    </div>
-                  </div>
-                `;
-              })}
-            </div>
-          `,
-        )}
-      </div>
-      <div class="export-container">
-        <vscode-button style="width: 100%" @click=${this.handleExport}
-          >Export Model</vscode-button
-        >
-      </div>
-    `;
   }
 }

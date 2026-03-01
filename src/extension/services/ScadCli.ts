@@ -3,8 +3,9 @@ import { readFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { OutputChannel } from "vscode";
+import { ModelFormat } from "../../shared/types/ModelFormat";
 
-export class OpenScadCli {
+export class ScadCli {
   private activeProcesses = new Map<string, ChildProcessWithoutNullStreams>();
 
   constructor(private logger: OutputChannel) {}
@@ -12,7 +13,7 @@ export class OpenScadCli {
   public async render(
     scadPath: string,
     parameters: string[] = [],
-    format: "3mf" | "stl" = "3mf",
+    format: ModelFormat = ModelFormat.ThreeMF,
   ): Promise<Buffer> {
     // Kill any currently running process for this file to prevent runway spawn leaks
     // when sliders emit rapid updates
@@ -70,7 +71,7 @@ export class OpenScadCli {
           // Clean up the temp file
           try {
             await unlink(tmpFile);
-          } catch (e) {
+          } catch {
             // Ignore cleanup failure
           }
         }

@@ -1,19 +1,26 @@
-import { LitElement, html, css } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
 import { consume } from "@lit/context";
-import { modelContext, ModelState } from "../../contexts/ModelContext";
+import { css, html, LitElement } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { modelContext, ModelContext } from "../../contexts/ModelContext";
 import {
   viewSettingsContext,
   ViewSettingsContext,
 } from "../../contexts/ViewSettingsContext";
 import { Stage } from "./Stage";
 
-@customElement("scad-canvas")
-export class PreviewCanvas extends LitElement {
+declare global {
+  interface HTMLElementTagNameMap {
+    "scad-preview": Preview;
+  }
+}
+
+@customElement("scad-preview")
+export class Preview extends LitElement {
   static styles = css`
     :host {
       display: block;
-      flex: 1;
+      width: 100%;
+      height: 100%;
       position: relative;
       overflow: hidden;
     }
@@ -69,11 +76,11 @@ export class PreviewCanvas extends LitElement {
 
   @consume({ context: viewSettingsContext, subscribe: true })
   @state()
-  viewSettings!: ViewSettingsContext;
+  viewSettingsContext!: ViewSettingsContext;
 
   @consume({ context: modelContext, subscribe: true })
   @state()
-  modelState!: ModelState;
+  modelContext!: ModelContext;
 
   @query("#canvas-container")
   private container!: HTMLElement;
@@ -87,26 +94,29 @@ export class PreviewCanvas extends LitElement {
     this.isInitialized = true;
 
     // Process any state that arrived before initialization
-    if (this.viewSettings) {
-      this.stage.applySettings(this.viewSettings);
+    if (this.viewSettingsContext) {
+      this.stage.applySettings(this.viewSettingsContext);
     }
-    if (this.modelState?.base64Data) {
-      this.stage.loadModelData(this.modelState);
+    if (this.modelContext?.base64Data) {
+      this.stage.loadModelData(this.modelContext);
     }
 
     this.setupResizeHandler();
   }
 
   // Bridging the declarative Lit cycle with the imperative Three.js cycle
-  updated(changedProperties: Map<string, any>) {
+  updated(changedProperties: Map<string, unknown>) {
     if (!this.isInitialized) return;
 
-    if (changedProperties.has("viewSettings") && this.viewSettings) {
-      this.stage.applySettings(this.viewSettings);
+    if (
+      changedProperties.has("viewSettingsContext") &&
+      this.viewSettingsContext
+    ) {
+      this.stage.applySettings(this.viewSettingsContext);
     }
 
-    if (changedProperties.has("modelState") && this.modelState) {
-      this.stage.loadModelData(this.modelState);
+    if (changedProperties.has("modelContext") && this.modelContext) {
+      this.stage.loadModelData(this.modelContext);
     }
   }
 
@@ -135,7 +145,7 @@ export class PreviewCanvas extends LitElement {
 
   render() {
     return html`
-      ${!this.modelState?.base64Data
+      ${!this.modelContext?.base64Data
         ? html`
             <div id="loading-overlay">
               <div class="spinner"></div>

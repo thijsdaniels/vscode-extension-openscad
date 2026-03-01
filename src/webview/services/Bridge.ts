@@ -1,4 +1,4 @@
-import { ExtensionToWebviewMessage } from "../../shared/types/messages";
+import { ExtensionToWebviewMessage } from "../../shared/types/ExtensionToWebviewMessage";
 
 const vscode = acquireVsCodeApi();
 

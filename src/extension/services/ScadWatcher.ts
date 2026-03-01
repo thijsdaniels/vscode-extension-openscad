@@ -1,20 +1,21 @@
 import { FSWatcher, watch } from "chokidar";
 import { OutputChannel, workspace } from "vscode";
-import { ScadParameter } from "../../shared/types/parameters";
-import { OpenScadCli } from "./OpenScadCli";
+import { ScadParameter } from "../../shared/types/ScadParameter";
+import { ScadCli } from "./ScadCli";
 import { ScadParser } from "./ScadParser";
+import { ModelFormat } from "../../shared/types/ModelFormat";
 
 export class ScadWatcher {
   private watcher: FSWatcher | undefined;
   private currentScadPath?: string;
 
   constructor(
-    private cli: OpenScadCli,
+    private cli: ScadCli,
     private parser: ScadParser,
     private logger: OutputChannel,
     private onChangeCallback: (data: {
       buffer: Buffer;
-      format: "3mf" | "stl";
+      format: ModelFormat;
     }) => void,
     private onParametersCallback?: (
       parameters: ScadParameter[],
@@ -43,7 +44,7 @@ export class ScadWatcher {
           // Notify that we're starting to process
           this.onChangeCallback({
             buffer: Buffer.from("loading"),
-            format: "3mf",
+            format: ModelFormat.ThreeMF,
           });
 
           // Get parameters first via injected parser
@@ -83,11 +84,11 @@ export class ScadWatcher {
     try {
       const format = workspace
         .getConfiguration("openscad")
-        .get<"3mf" | "stl">("previewFormat", "3mf");
+        .get<ModelFormat>("previewFormat", ModelFormat.ThreeMF);
 
       const modelBuffer = await this.cli.render(scadPath, paramArgs, format);
       this.onChangeCallback({ buffer: modelBuffer, format });
-    } catch (error) {
+    } catch {
       // Errors are already logged in the CLI wrapper
     }
   }

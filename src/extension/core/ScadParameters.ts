@@ -1,8 +1,8 @@
-import { ScadParameter } from "../../shared/types/parameters";
+import { ScadParameter } from "../../shared/types/ScadParameter";
 
 export class ScadParameters {
   private parameters: Map<string, ScadParameter> = new Map();
-  private overrides: Map<string, any> = new Map();
+  private overrides: Map<string, string | number | boolean> = new Map();
   private onChangeCallback?: () => void;
 
   constructor(onChangeCallback?: () => void) {
@@ -23,7 +23,7 @@ export class ScadParameters {
     }
   }
 
-  updateValue(name: string, value: any) {
+  updateValue(name: string, value: string | number | boolean | undefined) {
     if (value === null || value === undefined) {
       this.overrides.delete(name);
     } else {
@@ -36,7 +36,7 @@ export class ScadParameters {
     return Array.from(this.parameters.values());
   }
 
-  getOverrides(): Record<string, any> {
+  getOverrides(): Record<string, string | number | boolean> {
     return Object.fromEntries(this.overrides);
   }
 

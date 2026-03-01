@@ -1,9 +1,10 @@
 import { createContext } from "@lit/context";
+import { ModelFormat } from "../../shared/types/ModelFormat";
 
-export interface ModelState {
-  format: "stl" | "3mf" | null;
+export interface ModelContext {
+  format: ModelFormat | null;
   base64Data: string | null;
-  exportModel: () => void;
+  export: () => void;
 }
 
-export const modelContext = createContext<ModelState>("model");
+export const modelContext = createContext<ModelContext>("model");
