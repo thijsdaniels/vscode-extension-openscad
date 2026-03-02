@@ -1,7 +1,7 @@
 import { ExtensionContext, window } from "vscode";
 import { registerShowPanelCommand } from "./commands/showPanel";
 import { ScadSessionManager } from "./core/ScadSessionManager";
-import { ScadCli } from "./services/ScadCli";
+import { ScadClient } from "./services/ScadClient";
 import { ScadParser } from "./services/ScadParser";
 
 let sessionManager: ScadSessionManager | undefined;
@@ -11,12 +11,8 @@ export function activate(context: ExtensionContext) {
   const logger = window.createOutputChannel("OpenSCAD Preview");
   context.subscriptions.push(logger);
 
-  // 2. Instantiate global services
-  const cli = new ScadCli(logger);
-  const parser = new ScadParser(logger);
-
   // 3. Create the centralized Session Manager
-  sessionManager = new ScadSessionManager(cli, parser, logger);
+  sessionManager = new ScadSessionManager();
 
   // 4. Register Commands
   const showPanelDisposable = registerShowPanelCommand(context, sessionManager);

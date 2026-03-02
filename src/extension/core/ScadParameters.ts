@@ -1,15 +1,35 @@
 import { ScadParameter } from "../../shared/types/ScadParameter";
 
+/**
+ * Keeps a reference to the parameters of a SCAD document, as well as a set of
+ * optional overrides for those parameters.
+ */
 export class ScadParameters {
   private parameters: Map<string, ScadParameter> = new Map();
   private overrides: Map<string, string | number | boolean> = new Map();
-  private onChangeCallback?: () => void;
+  private onChange?: (event: {
+    parameters: ScadParameter[];
+    overrides: Record<string, string | number | boolean>;
+  }) => void;
 
-  constructor(onChangeCallback?: () => void) {
-    this.onChangeCallback = onChangeCallback;
+  constructor({
+    onChange,
+  }: {
+    onChange?: (event: {
+      parameters: ScadParameter[];
+      overrides: Record<string, string | number | boolean>;
+    }) => void;
+  } = {}) {
+    this.onChange = onChange;
   }
 
-  updateDefinitions(newParameters: ScadParameter[]) {
+  /**
+   * Call this to update the original parameter definitions, for example after
+   * the SCAD file has been changed.
+   *
+   * Re-evaluates overrides to drop any that no longer exist in the new definitions.
+   */
+  public updateDefinitions(newParameters: ScadParameter[]) {
     this.parameters.clear();
     newParameters.forEach((param) => {
       this.parameters.set(param.name, param);
@@ -21,33 +41,54 @@ export class ScadParameters {
         this.overrides.delete(name);
       }
     }
+
+    this.onChange?.({
+      parameters: this.getParameters(),
+      overrides: this.getOverrides(),
+    });
   }
 
-  updateValue(name: string, value: string | number | boolean | undefined) {
+  /**
+   * Call this to override a parameter value, or to revert back to the original
+   * value for a parameter.
+   */
+  public updateValue(
+    name: string,
+    value: string | number | boolean | undefined,
+  ) {
     if (value === null || value === undefined) {
       this.overrides.delete(name);
     } else {
       this.overrides.set(name, value);
     }
-    this.onChangeCallback?.();
+
+    this.onChange?.({
+      parameters: this.getParameters(),
+      overrides: this.getOverrides(),
+    });
   }
 
-  getParameters(): ScadParameter[] {
+  public getParameters(): ScadParameter[] {
     return Array.from(this.parameters.values());
   }
 
-  getOverrides(): Record<string, string | number | boolean> {
+  public getOverrides(): Record<string, string | number | boolean> {
     return Object.fromEntries(this.overrides);
   }
 
-  getParameterArgs(): string[] {
-    const args: string[] = [];
+  /**
+   * Returns a merged record of the active parameter values,
+   * combining default values with any updated overrides.
+   */
+  public getActiveValues(): Record<string, string | number | boolean> {
+    const active: Record<string, string | number | boolean> = {};
+
     for (const param of this.parameters.values()) {
-      const value = this.overrides.has(param.name)
-        ? this.overrides.get(param.name)
+      active[param.name] = this.overrides.has(param.name)
+        ? this.overrides.get(param.name)!
         : param.value;
-      args.push("--D", `${param.name}=${value}`);
     }
-    return args;
+
+    return active;
   }
 }

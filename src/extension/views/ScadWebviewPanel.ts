@@ -77,7 +77,7 @@ export class ScadWebviewPanel {
       this.disposables,
     );
 
-    this.session.onPreviewUpdated(
+    this.session.onRenderCompleted(
       ({ buffer, format }) => {
         if (buffer.toString() === "loading") {
           this.postMessage({
@@ -99,7 +99,7 @@ export class ScadWebviewPanel {
       this.disposables,
     );
 
-    this.session.onParametersUpdated(
+    this.session.onParametersChanged(
       ({ parameters, overrides }) => {
         if (this.isWebviewReady) {
           this.postMessage({
@@ -173,16 +173,6 @@ export class ScadWebviewPanel {
   }
 
   private pushInitialState() {
-    // Send initial preview data if it already rendered
-    const lastData = this.session.lastPreviewData;
-    if (lastData) {
-      this.postMessage({
-        type: "update",
-        content: lastData.buffer.toString("base64"),
-        format: lastData.format,
-      });
-    }
-
     // Send initial parameters
     const params = this.session.currentParameters;
     const overrides = this.session.currentOverrides;

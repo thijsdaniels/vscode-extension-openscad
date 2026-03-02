@@ -1,12 +1,14 @@
 import { consume } from "@lit/context";
 import { css, html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
 import { ScadParameter } from "../../shared/types/ScadParameter";
 import {
   parameterContext,
   ParameterContext,
 } from "../contexts/ParameterContext";
 import "./MaterialSymbol";
+import "./ScadNumberfield";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -57,19 +59,31 @@ export class Parameters extends LitElement {
       margin-bottom: 8px;
     }
 
-    .parameter label {
-      font-size: 12px;
-      width: 50%;
-    }
-
-    .input-container {
+    .parameter-label-container {
       width: 50%;
       display: flex;
+      justify-content: space-between;
       align-items: center;
       gap: 8px;
     }
 
+    .parameter-label {
+      font-size: 12px;
+    }
+
+    .parameter-label--overridden {
+      font-weight: bold;
+    }
+
+    .input-container {
+      width: 50%;
+    }
+
     vscode-textfield {
+      width: 100%;
+    }
+
+    vscode-single-select {
       width: 100%;
     }
   `;
@@ -100,11 +114,16 @@ export class Parameters extends LitElement {
 
                 return html`
                   <div class="parameter">
-                    <label>
-                      ${this.formatParameterName(parameter.name, groupName)}
-                    </label>
-                    <div class="input-container">
-                      ${this.renderInput(parameter, currentValue)}
+                    <div class="parameter-label-container">
+                      <label
+                        title="${parameter.description}"
+                        class=${classMap({
+                          "parameter-label": true,
+                          "parameter-label--overridden": isOverridden,
+                        })}
+                      >
+                        ${this.formatParameterName(parameter.name, groupName)}
+                      </label>
                       ${isOverridden
                         ? html`
                             <vscode-toolbar-button
@@ -118,6 +137,9 @@ export class Parameters extends LitElement {
                             ></vscode-toolbar-button>
                           `
                         : nothing}
+                    </div>
+                    <div class="input-container">
+                      ${this.renderInput(parameter, currentValue)}
                     </div>
                   </div>
                 `;
@@ -166,11 +188,53 @@ export class Parameters extends LitElement {
   }
 
   private renderInput(param: ScadParameter, currentValue: unknown) {
+    if (param.type === "string" && "options" in param && param.options) {
+      return html`
+        <vscode-single-select
+          .value=${currentValue}
+          @change=${(e: Event) =>
+            this.handleInputChange(
+              param.name,
+              (e.target as HTMLSelectElement).value,
+            )}
+        >
+          ${param.options.map(
+            (opt) => html`
+              <vscode-option value="${opt.value}"
+                >${opt.label || opt.value}</vscode-option
+              >
+            `,
+          )}
+        </vscode-single-select>
+      `;
+    }
+
+    if (param.type === "number" && "options" in param && param.options) {
+      return html`
+        <vscode-single-select
+          .value=${currentValue?.toString()}
+          @change=${(e: Event) =>
+            this.handleInputChange(
+              param.name,
+              parseFloat((e.target as HTMLSelectElement).value),
+            )}
+        >
+          ${param.options.map(
+            (opt) => html`
+              <vscode-option value="${opt.value}"
+                >${opt.label || opt.value}</vscode-option
+              >
+            `,
+          )}
+        </vscode-single-select>
+      `;
+    }
+
     switch (param.type) {
       case "boolean":
         return html`
           <vscode-checkbox
-            toggle
+            ?indeterminate=${false}
             .checked=${currentValue}
             @change=${(e: Event) =>
               this.handleInputChange(
@@ -181,15 +245,16 @@ export class Parameters extends LitElement {
         `;
       case "number":
         return html`
-          <vscode-textfield
-            size="3"
-            .value=${currentValue?.toString()}
-            @change=${(e: Event) =>
-              this.handleInputChange(
-                param.name,
-                parseFloat((e.target as HTMLInputElement).value),
-              )}
-          ></vscode-textfield>
+          <scad-numberfield
+            .value=${typeof currentValue === "number"
+              ? currentValue
+              : Number(currentValue) || param.min || 0}
+            .min=${param.min}
+            .max=${param.max}
+            .step=${param.step}
+            @change=${(e: CustomEvent) =>
+              this.handleInputChange(param.name, e.detail.value)}
+          ></scad-numberfield>
         `;
       case "string":
         return html`

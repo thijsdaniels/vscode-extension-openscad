@@ -1,85 +1,208 @@
-import { readFile } from "fs/promises";
-import { OutputChannel } from "vscode";
-import { ScadParameter } from "../../shared/types/ScadParameter";
+import {
+  NumericParameter,
+  ParameterOption,
+  ScadParameter,
+  StringParameter,
+} from "../../shared/types/ScadParameter";
 
+/**
+ * Parses SCAD files to extract relevant information from them.
+ */
 export class ScadParser {
-  constructor(private logger: OutputChannel) {}
+  public readonly parameters: ScadParameter[];
 
-  public async extractParameters(scadPath: string): Promise<ScadParameter[]> {
-    try {
-      const content = await readFile(scadPath, "utf8");
-      const params: ScadParameter[] = [];
-      let currentGroup = "";
-      let moduleDepth = 0;
+  constructor(content: string) {
+    this.parameters = this.extractParameters(content);
+  }
 
-      const lines = content.split("\n");
-      for (const line of lines) {
-        const trimmed = line.trim();
+  private extractParameters(content: string): ScadParameter[] {
+    const params: ScadParameter[] = [];
+    let currentGroup = "";
+    let moduleDepth = 0;
 
-        // Skip empty lines and comments that aren't group markers
-        if (!trimmed || (trimmed.startsWith("//") && !trimmed.includes("/*"))) {
-          continue;
-        }
+    const lines = content.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
 
-        // Track module scope using brace counting
-        if (trimmed.startsWith("module")) {
-          moduleDepth++;
-        }
-        // Count all braces in the line
-        moduleDepth += (trimmed.match(/\{/g) || []).length;
-        moduleDepth -= (trimmed.match(/\}/g) || []).length;
-
-        // Skip if we're inside any module
-        if (moduleDepth > 0) {
-          continue;
-        }
-
-        // Check for parameter group comments
-        if (trimmed.startsWith("/*")) {
-          const groupMatch = trimmed.match(/\/\*\s*\[(.*?)\]\s*\*\//);
-          if (groupMatch) {
-            currentGroup = groupMatch[1];
-          }
-          continue;
-        }
-
-        // Look for variable declarations in global scope
-        const varMatch = trimmed.match(/^(\w+)\s*=\s*(.+?);/);
-        if (varMatch) {
-          const [, name, valueStr] = varMatch;
-          let type: "number" | "boolean" | "string";
-          let value: string | number | boolean;
-
-          // Skip if we're in a Hidden group (case insensitive)
-          if (currentGroup.toLowerCase() === "hidden") {
-            continue;
-          }
-
-          // Determine type and parse value
-          if (valueStr === "true" || valueStr === "false") {
-            type = "boolean";
-            value = valueStr === "true";
-          } else if (!isNaN(Number(valueStr))) {
-            type = "number";
-            value = Number(valueStr);
-          } else {
-            type = "string";
-            value = valueStr.replace(/^["']|["']$/g, ""); // Remove quotes if present
-          }
-
-          params.push({
-            name,
-            type,
-            group: currentGroup || undefined,
-            value,
-          } as ScadParameter);
-        }
+      // Skip empty lines and comments that aren't group markers
+      if (!trimmed || (trimmed.startsWith("//") && !trimmed.includes("/*"))) {
+        continue;
       }
 
-      return params;
-    } catch (error) {
-      this.logger.appendLine(`ERROR: Failed to parse SCAD file: ${error}`);
-      throw error;
+      // Track module scope using brace counting
+      if (trimmed.startsWith("module")) {
+        moduleDepth++;
+      }
+      moduleDepth += (trimmed.match(/\{/g) || []).length;
+      moduleDepth -= (trimmed.match(/\}/g) || []).length;
+
+      if (moduleDepth > 0) continue;
+
+      // Check for parameter group comments
+      if (trimmed.startsWith("/*")) {
+        const group = this.extractParameterGroup(trimmed);
+        if (group !== null) {
+          currentGroup = group;
+        }
+        continue;
+      }
+
+      // Look for variable declarations
+      const decl = this.parseVariableDeclaration(trimmed);
+      if (!decl) continue;
+
+      if (currentGroup.toLowerCase() === "hidden") continue;
+
+      const parsedVal = this.parseVariableValue(decl.valueStr);
+
+      // We construct the object in a type-safe way before applying to partial
+      const param: Partial<ScadParameter> = {
+        name: decl.name,
+        type: parsedVal.type,
+        group: currentGroup || undefined,
+        value: parsedVal.value,
+      } as Partial<ScadParameter>;
+
+      if (decl.commentStr) {
+        this.parseTrailingComment(decl.commentStr, param);
+      }
+
+      params.push(param as ScadParameter);
+    }
+
+    return params;
+  }
+
+  private extractParameterGroup(line: string): string | null {
+    const groupMatch = line.match(/\/\*\s*\[(.*?)\]\s*\*\//);
+    return groupMatch ? groupMatch[1] : null;
+  }
+
+  private parseVariableDeclaration(
+    line: string,
+  ): { name: string; valueStr: string; commentStr: string } | null {
+    const varMatch = line.match(/^(\w+)\s*=\s*(.+?);(.*)/);
+    if (varMatch) {
+      return {
+        name: varMatch[1],
+        valueStr: varMatch[2],
+        commentStr: varMatch[3],
+      };
+    }
+    return null;
+  }
+
+  private parseVariableValue(valueStr: string): {
+    type: "number" | "boolean" | "string";
+    value: string | number | boolean;
+  } {
+    const trimmed = valueStr.trim();
+    if (trimmed === "true" || trimmed === "false") {
+      return { type: "boolean", value: trimmed === "true" };
+    } else if (trimmed !== "" && !isNaN(Number(trimmed))) {
+      return { type: "number", value: Number(trimmed) };
+    } else {
+      return {
+        type: "string",
+        value: trimmed.replace(/^["']|["']$/g, ""),
+      };
+    }
+  }
+
+  private parseChoices(
+    configStr: string,
+    type: "number" | "string",
+  ): ParameterOption<number | string>[] {
+    const options: ParameterOption<number | string>[] = [];
+    const parts = configStr.split(",").map((p) => p.trim());
+
+    for (const part of parts) {
+      if (!part) continue;
+
+      let valStr = part;
+      let label: string | undefined = undefined;
+
+      const colonIdx = part.indexOf(":");
+      if (colonIdx !== -1) {
+        valStr = part.substring(0, colonIdx).trim();
+        label = part.substring(colonIdx + 1).trim();
+      }
+
+      if (type === "number") {
+        const val = Number(valStr);
+        if (!isNaN(val)) {
+          options.push({ value: val, label });
+        }
+      } else {
+        const val = valStr.replace(/^["']|["']$/g, "");
+        options.push({ value: val, label });
+      }
+    }
+    return options;
+  }
+
+  private parseRange(
+    configStr: string,
+  ): { min: number; max: number; step?: number } | null {
+    const rangeStepMatch = configStr.match(
+      /^(-?[\d.]+)\s*:\s*(-?[\d.]+)\s*:\s*(-?[\d.]+)$/,
+    );
+    if (rangeStepMatch) {
+      return {
+        min: Number(rangeStepMatch[1]),
+        step: Number(rangeStepMatch[2]),
+        max: Number(rangeStepMatch[3]),
+      };
+    }
+
+    const rangeMatch = configStr.match(/^(-?[\d.]+)\s*:\s*(-?[\d.]+)$/);
+    if (rangeMatch) {
+      return {
+        min: Number(rangeMatch[1]),
+        max: Number(rangeMatch[2]),
+      };
+    }
+
+    return null;
+  }
+
+  private parseTrailingComment(
+    commentStr: string,
+    param: Partial<ScadParameter>,
+  ): void {
+    const comment = commentStr.trim();
+    if (!comment.startsWith("//")) return;
+
+    const commentContent = comment.substring(2).trim();
+
+    const configMatch = commentContent.match(/^\[(.*)\]$/);
+    if (configMatch) {
+      const configStr = configMatch[1].trim();
+
+      if (param.type === "number") {
+        const numParam = param as Partial<NumericParameter>;
+        const range = this.parseRange(configStr);
+        if (range) {
+          numParam.min = range.min;
+          numParam.max = range.max;
+          if (range.step !== undefined) numParam.step = range.step;
+        } else {
+          const options = this.parseChoices(
+            configStr,
+            "number",
+          ) as ParameterOption<number>[];
+          if (options.length > 0) numParam.options = options;
+        }
+      } else if (param.type === "string") {
+        const strParam = param as Partial<StringParameter>;
+        const options = this.parseChoices(
+          configStr,
+          "string",
+        ) as ParameterOption<string>[];
+        if (options.length > 0) strParam.options = options;
+      }
+    } else if (commentContent) {
+      param.description = commentContent;
     }
   }
 }

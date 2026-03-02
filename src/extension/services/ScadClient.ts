@@ -2,24 +2,27 @@ import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { readFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
-import { OutputChannel } from "vscode";
 import { ModelFormat } from "../../shared/types/ModelFormat";
 
-export class ScadCli {
-  private activeProcesses = new Map<string, ChildProcessWithoutNullStreams>();
+/**
+ * A TypeScript wrapper around the OpenSCAD CLI. This is currently very limited
+ * in functionality, serving only the needs of this extension.
+ */
+export class ScadClient {
+  private static activeProcesses = new Map<
+    string,
+    ChildProcessWithoutNullStreams
+  >();
 
-  constructor(private logger: OutputChannel) {}
-
-  public async render(
+  public static async render(
     scadPath: string,
-    parameters: string[] = [],
+    parameters: Record<string, string | number | boolean> = {},
     format: ModelFormat = ModelFormat.ThreeMF,
   ): Promise<Buffer> {
     // Kill any currently running process for this file to prevent runway spawn leaks
     // when sliders emit rapid updates
     const existingProcess = this.activeProcesses.get(scadPath);
     if (existingProcess) {
-      this.log("INFO", `Canceling previous render for ${scadPath}`);
       existingProcess.kill();
       this.activeProcesses.delete(scadPath);
     }
@@ -30,13 +33,18 @@ export class ScadCli {
         `openscad-render-${crypto.randomUUID()}.${format}`,
       );
 
+      const paramArgs: string[] = [];
+      for (const [name, value] of Object.entries(parameters)) {
+        paramArgs.push("-D", `${name}=${value}`);
+      }
+
       const process = spawn("openscad", [
         "--export-format",
         format,
         "-o",
         tmpFile,
         "-q",
-        ...parameters,
+        ...paramArgs,
         scadPath,
       ]);
 
@@ -57,7 +65,6 @@ export class ScadCli {
 
         if (code !== 0) {
           const errorMsg = `OpenSCAD process exited with code ${code}`;
-          this.log("ERROR", errorMsg);
           reject(new Error(errorMsg));
           return;
         }
@@ -80,14 +87,8 @@ export class ScadCli {
       process.on("error", (err) => {
         this.activeProcesses.delete(scadPath);
         const errorMsg = `Failed to start OpenSCAD: ${err}`;
-        this.log("ERROR", errorMsg);
         reject(new Error(errorMsg));
       });
     });
-  }
-
-  private log(level: "INFO" | "ERROR", message: string) {
-    const timestamp = new Date().toISOString();
-    this.logger.appendLine(`[${timestamp}] [${level}] ${message}`);
   }
 }

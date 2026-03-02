@@ -1,9 +1,10 @@
-import { EventEmitter, OutputChannel, Uri } from "vscode";
+import { EventEmitter, Uri } from "vscode";
 import { ModelFormat } from "../../shared/types/ModelFormat";
 import { ScadParameter } from "../../shared/types/ScadParameter";
-import { ScadCli } from "../services/ScadCli";
+import { ScadClient } from "../services/ScadClient";
 import { ScadParser } from "../services/ScadParser";
-import { ScadWatcher } from "../services/ScadWatcher";
+import { ScadRenderer } from "../services/ScadRenderer";
+import { FileWatcher } from "../services/ScadWatcher";
 import { ScadParameters } from "./ScadParameters";
 
 /**
@@ -11,71 +12,61 @@ import { ScadParameters } from "./ScadParameters";
  * Decouples the file watching and parameter parsing from any specific Webview Panel UI.
  */
 export class ScadSession {
-  private scadWatcher: ScadWatcher;
+  private scadWatcher: FileWatcher;
   private scadParameters: ScadParameters;
-  private _lastPreviewData: Buffer | undefined;
-  private _lastPreviewFormat: ModelFormat = ModelFormat.ThreeMF;
+  private scadRenderer: ScadRenderer;
 
   // Events that Views can subscribe to
-  private _onPreviewUpdated = new EventEmitter<{
+  private _onRenderCompleted = new EventEmitter<{
     buffer: Buffer;
     format: ModelFormat;
   }>();
-  public readonly onPreviewUpdated = this._onPreviewUpdated.event;
+  public readonly onRenderCompleted = this._onRenderCompleted.event;
 
-  private _onParametersUpdated = new EventEmitter<{
+  private _onParametersChanged = new EventEmitter<{
     parameters: ScadParameter[];
     overrides: Record<string, string | number | boolean>;
   }>();
-  public readonly onParametersUpdated = this._onParametersUpdated.event;
+  public readonly onParametersChanged = this._onParametersChanged.event;
 
   private _onRenderStarted = new EventEmitter<void>();
   public readonly onRenderStarted = this._onRenderStarted.event;
 
-  constructor(
-    public readonly documentUri: Uri,
-    private readonly cli: ScadCli,
-    parser: ScadParser,
-    logger: OutputChannel,
-  ) {
-    // Manager for current parameter values
-    this.scadParameters = new ScadParameters(() => {
-      this.scadWatcher.renderWithParameters(
-        this.scadParameters.getParameterArgs(),
-      );
+  /**
+   * @todo The session lifecycle isn't as clean as it could be. For example,
+   * it shouldn't be necessary to fire the onParametersUpdated event from the
+   * scadWatcher.onChange callback, because that callback is already updating
+   * the parameters, which _should_ trigger the scadParameters.onChange
+   * callback, but it currently doesn't. When it does, we should make sure we
+   * don't render twice, because the scadParameters.onChange callback already
+   * triggers a render as well. Perhaps the lifecycle itself is OK, but just not
+   * very clearly laid out.
+   */
+  constructor(public readonly documentUri: Uri) {
+    // Renderer that generates a model for the preview.
+    this.scadRenderer = new ScadRenderer({
+      onStart: () => this._onRenderStarted.fire(),
+      onComplete: (data) => this._onRenderCompleted.fire(data),
     });
 
-    // Watcher for file changes
-    this.scadWatcher = new ScadWatcher(
-      cli,
-      parser,
-      logger,
-      (data) => {
-        if (data.buffer.toString() !== "loading") {
-          this._lastPreviewData = data.buffer;
-          this._lastPreviewFormat = data.format;
-        }
-        this._onPreviewUpdated.fire(data);
-      },
-      (parameters) => {
-        this.scadParameters.updateDefinitions(parameters);
-        this._onParametersUpdated.fire({
-          parameters: this.scadParameters.getParameters(),
-          overrides: this.scadParameters.getOverrides(),
-        });
-        return this.scadParameters.getParameterArgs();
-      },
-      () => this._onRenderStarted.fire(),
-    );
+    // Manager for current parameter values and overrides.
+    this.scadParameters = new ScadParameters({
+      onChange: (event) => this._onParametersChanged.fire(event),
+    });
 
-    this.scadWatcher.watchFile(documentUri.fsPath);
-  }
+    // Watcher for file changes.
+    this.scadWatcher = new FileWatcher({
+      path: documentUri.fsPath,
+      onChange: ({ content }) => {
+        const parser = new ScadParser(content);
+        this.scadParameters.updateDefinitions(parser.parameters);
 
-  public get lastPreviewData():
-    | { buffer: Buffer; format: ModelFormat }
-    | undefined {
-    if (!this._lastPreviewData) return undefined;
-    return { buffer: this._lastPreviewData, format: this._lastPreviewFormat };
+        this.scadRenderer.render(
+          this.documentUri.fsPath,
+          this.scadParameters.getActiveValues(),
+        );
+      },
+    });
   }
 
   public get currentParameters(): ScadParameter[] {
@@ -91,24 +82,25 @@ export class ScadSession {
     value: string | number | boolean | undefined,
   ) {
     this.scadParameters.updateValue(name, value);
-    this._onParametersUpdated.fire({
-      parameters: this.scadParameters.getParameters(),
-      overrides: this.scadParameters.getOverrides(),
-    });
+
+    this.scadRenderer.render(
+      this.documentUri.fsPath,
+      this.scadParameters.getActiveValues(),
+    );
   }
 
   public async exportFormat(format: ModelFormat): Promise<Buffer> {
-    return this.cli.render(
+    return ScadClient.render(
       this.documentUri.fsPath,
-      this.scadParameters.getParameterArgs(),
+      this.scadParameters.getActiveValues(),
       format,
     );
   }
 
   public dispose() {
     this.scadWatcher.close();
-    this._onPreviewUpdated.dispose();
-    this._onParametersUpdated.dispose();
     this._onRenderStarted.dispose();
+    this._onRenderCompleted.dispose();
+    this._onParametersChanged.dispose();
   }
 }

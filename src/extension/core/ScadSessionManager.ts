@@ -1,6 +1,5 @@
 import { OutputChannel, Uri } from "vscode";
-import { ScadCli } from "../services/ScadCli";
-import { ScadParser } from "../services/ScadParser";
+import { ScadClient } from "../services/ScadClient";
 import { ScadSession } from "./ScadSession";
 
 /**
@@ -11,11 +10,7 @@ import { ScadSession } from "./ScadSession";
 export class ScadSessionManager {
   private sessions = new Map<string, ScadSession>();
 
-  constructor(
-    private cli: ScadCli,
-    private parser: ScadParser,
-    private logger: OutputChannel,
-  ) {}
+  constructor() {}
 
   /**
    * Gets an existing session for a URI or creates a new one if it doesn't
@@ -26,13 +21,7 @@ export class ScadSessionManager {
     let session = this.sessions.get(key);
 
     if (!session) {
-      this.logger.appendLine(`Creating new session for ${documentUri.fsPath}`);
-      session = new ScadSession(
-        documentUri,
-        this.cli,
-        this.parser,
-        this.logger,
-      );
+      session = new ScadSession(documentUri);
       this.sessions.set(key, session);
     }
 
@@ -48,7 +37,6 @@ export class ScadSessionManager {
     if (session) {
       session.dispose();
       this.sessions.delete(key);
-      this.logger.appendLine(`Disposed session for ${documentUri.fsPath}`);
     }
   }
 

@@ -95,7 +95,7 @@ export class EnvironmentRig {
       this.theme.plateGrid,
     );
     grid.material.depthTest = false;
-    (grid.material as any).fog = false;
+    grid.material.fog = false;
     this.group.add(grid);
 
     return { mesh, grid };
