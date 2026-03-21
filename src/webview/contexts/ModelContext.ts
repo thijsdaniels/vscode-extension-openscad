@@ -5,6 +5,7 @@ export interface ModelContext {
   format: ModelFormat | null;
   base64Data: string | null;
   export: () => void;
+  sendToSlicer: () => void;
 }
 
 export const modelContext = createContext<ModelContext>("model");

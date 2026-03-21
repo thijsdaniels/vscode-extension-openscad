@@ -4,9 +4,13 @@ import {
   Uri,
   Webview,
   WebviewPanel,
+  env,
   window,
   workspace,
 } from "vscode";
+import * as os from "os";
+import * as path from "path";
+import * as cp from "child_process";
 import { ExtensionToWebviewMessage } from "../../shared/types/ExtensionToWebviewMessage";
 import { ModelFormat } from "../../shared/types/ModelFormat";
 import { WebviewToExtensionMessage } from "../../shared/types/WebviewToExtensionMessage";
@@ -54,6 +58,9 @@ export class ScadWebviewPanel {
             return;
           case "exportModel":
             this.exportModel();
+            return;
+          case "sendToSlicer":
+            this.sendToSlicer();
             return;
           case "error":
             window.showErrorMessage(`Preview Error: ${message.message}`);
@@ -256,6 +263,48 @@ export class ScadWebviewPanel {
       } catch (error) {
         window.showErrorMessage(`Failed to export ${format.label}: ${error}`);
       }
+    }
+  }
+
+  private async sendToSlicer() {
+    try {
+      await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: "Sending to Slicer...",
+          cancellable: false,
+        },
+        async () => {
+          const config = workspace.getConfiguration("openscad");
+          const formatValue = config.get<string>("previewFormat") || "3mf";
+          const format = formatValue === "stl" ? ModelFormat.STL : ModelFormat.ThreeMF;
+          
+          const buffer = await this.session.exportFormat(format);
+          
+          const timestamp = new Date().getTime();
+          const tmpFilePath = path.join(
+            os.tmpdir(),
+            `openscad_preview_${timestamp}.${format}`,
+          );
+          const uri = Uri.file(tmpFilePath);
+          
+          await workspace.fs.writeFile(uri, new Uint8Array(buffer));
+          
+          const slicerExecutable = config.get<string>("slicerExecutable");
+          
+          if (slicerExecutable && slicerExecutable.trim() !== "") {
+            cp.execFile(slicerExecutable.trim(), [tmpFilePath], (error) => {
+              if (error) {
+                window.showErrorMessage(`Failed to launch slicer: ${error.message}`);
+              }
+            });
+          } else {
+            await env.openExternal(uri);
+          }
+        },
+      );
+    } catch (error) {
+      window.showErrorMessage(`Failed to send to slicer: ${error}`);
     }
   }
 

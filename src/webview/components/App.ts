@@ -110,6 +110,7 @@ export class App extends LitElement {
     format: null,
     base64Data: null,
     export: bridge.exportModel,
+    sendToSlicer: bridge.sendToSlicer,
   };
 
   private logController = new LogController(this);

@@ -61,6 +61,11 @@
           ],
           "default": "3mf",
           "description": "The format to use for the 3D preview. 3MF supports colors but requires OpenSCAD Nightly. STL is universally supported."
+        },
+        "openscad.slicerExecutable": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the slicer executable (e.g., Bambu Studio or PrusaSlicer). If left empty, the OS default application for the 3D model will be used."
         }
       }
     },

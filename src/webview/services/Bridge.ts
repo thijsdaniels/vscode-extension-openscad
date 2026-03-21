@@ -37,6 +37,10 @@ export class Bridge {
     vscode.postMessage({ type: "exportModel" });
   }
 
+  public sendToSlicer() {
+    vscode.postMessage({ type: "sendToSlicer" });
+  }
+
   public reportError(error: unknown) {
     console.error("[OpenSCAD Preview]", error);
     vscode.postMessage({

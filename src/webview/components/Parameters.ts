@@ -38,6 +38,9 @@ export class Parameters extends LitElement {
     }
 
     .export-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
       padding: 16px;
       border-top: 1px solid var(--vscode-panel-border);
       flex-shrink: 0;
@@ -181,7 +184,15 @@ export class Parameters extends LitElement {
       <div class="export-container">
         <button
           class="export-button"
-          title="Export model with current parameters"
+          title="Send Model to 3D Slicer"
+          @click=${() => this.modelContext.sendToSlicer()}
+        >
+          <material-symbol name="print"></material-symbol>
+          Print
+        </button>
+        <button
+          class="export-button"
+          title="Write Model to File System"
           @click=${() => this.modelContext.export()}
         >
           <material-symbol name="file_save"></material-symbol>
