@@ -97,7 +97,7 @@ export class App extends LitElement {
     get: (name) =>
       this.parameterContext.parameters.find((p) => p.name === name),
     override: (name, value) => {
-      bridge.updateParameterOverride(name, value?.toString());
+      bridge.updateParameterOverride(name, value);
     },
     revert: (name) => {
       bridge.updateParameterOverride(name, undefined);

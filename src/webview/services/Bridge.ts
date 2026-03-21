@@ -29,7 +29,10 @@ export class Bridge {
     vscode.postMessage({ type: "ready" });
   }
 
-  public updateParameterOverride(name: string, value: string | undefined) {
+  public updateParameterOverride(
+    name: string,
+    value: string | number | boolean | undefined,
+  ) {
     vscode.postMessage({ type: "parameterChanged", name, value });
   }
 

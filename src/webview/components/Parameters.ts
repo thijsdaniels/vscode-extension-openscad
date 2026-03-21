@@ -234,7 +234,10 @@ export class Parameters extends LitElement {
 
   private handleInputChange(name: string, value: unknown) {
     if (this.parameterContext.override) {
-      this.parameterContext.override(name, value as string);
+      this.parameterContext.override(
+        name,
+        value as string | number | boolean,
+      );
     }
   }
 
