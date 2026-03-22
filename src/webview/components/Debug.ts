@@ -1,7 +1,6 @@
 import { consume } from "@lit/context";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { classMap } from "lit/directives/class-map.js";
 import { logContext, LogContext } from "../contexts/LogContext";
 import "./MaterialSymbol";
 
@@ -43,40 +42,8 @@ export class Debug extends LitElement {
     .header-actions {
       display: flex;
       flex-direction: row;
+      gap: 4px;
       align-items: center;
-    }
-
-    .segment-button {
-      border: 1px solid var(--vscode-input-border);
-      border-right: none;
-      background: transparent;
-      color: var(--vscode-toolbar-foreground);
-      padding: 0.15rem 0.25rem;
-      font-size: 0.9rem; /* slightly smaller for panel header */
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .segment-button:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-
-    .segment-button.active {
-      background: var(--vscode-toolbar-activeBackground);
-      color: var(--vscode-toolbar-activeForeground);
-    }
-
-    .segment-button.first {
-      border-top-left-radius: 0.25rem;
-      border-bottom-left-radius: 0.25rem;
-    }
-
-    .segment-button.last {
-      border-top-right-radius: 0.25rem;
-      border-bottom-right-radius: 0.25rem;
-      border-right: 1px solid var(--vscode-input-border);
     }
 
     .log-container {
@@ -104,10 +71,6 @@ export class Debug extends LitElement {
       display: flex;
       gap: 8px;
       align-items: flex-start;
-    }
-
-    .log-icon {
-      font-size: 14px;
     }
 
     .log-text {
@@ -164,7 +127,6 @@ export class Debug extends LitElement {
 
   updated(changedProperties: Map<string | number | symbol, unknown>) {
     super.updated(changedProperties);
-    // Auto-scroll to bottom when logs update
     if (changedProperties.has("logContext")) {
       const container = this.shadowRoot?.querySelector(".log-container");
       if (container) {
@@ -190,29 +152,20 @@ export class Debug extends LitElement {
   render() {
     return html`
       <div class="header">
-        <span>OpenSCAD Output</span>
+        <span>Output</span>
         <div class="header-actions">
-          <button
-            class=${classMap({
-              "segment-button": true,
-              first: true,
-              active: this.logContext?.autoClear,
-            })}
+          <vscode-toolbar-button
+            icon="eraser"
+            toggleable
+            .checked=${this.logContext?.autoClear}
             title="Auto-clear on new renders"
-            @click=${() => this.logContext?.toggleAutoClear()}
-          >
-            <material-symbol name="auto_delete"></material-symbol>
-          </button>
-          <button
-            class=${classMap({
-              "segment-button": true,
-              last: true,
-            })}
+            @change=${() => this.logContext?.toggleAutoClear()}
+          ></vscode-toolbar-button>
+          <vscode-toolbar-button
+            icon="clear-all"
             title="Clear Console"
             @click=${() => this.logContext?.clear()}
-          >
-            <material-symbol name="clear_all"></material-symbol>
-          </button>
+          ></vscode-toolbar-button>
         </div>
       </div>
 
@@ -221,10 +174,10 @@ export class Debug extends LitElement {
           (log) => html`
             <div class="log-message log-${log.level}" id="${log.id}">
               <div class="log-header">
-                <material-symbol
-                  class="log-icon"
+                <vscode-icon
+                  style="color: currentColor"
                   name="${this.getIcon(log.level)}"
-                ></material-symbol>
+                ></vscode-icon>
                 <div class="log-text">${log.text}</div>
               </div>
               ${log.traces.length > 0
@@ -233,7 +186,8 @@ export class Debug extends LitElement {
                       <summary>&nbsp;Show trace...</summary>
                       <div class="log-trace">
                         ${log.traces.map(
-                          (t) => html`<div class="log-trace-entry">${t}</div>`,
+                          (trace) =>
+                            html`<div class="log-trace-entry">${trace}</div>`,
                         )}
                       </div>
                     </details>

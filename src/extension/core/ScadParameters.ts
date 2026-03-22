@@ -6,9 +6,13 @@ import { ScadParameter } from "../../shared/types/ScadParameter";
  */
 export class ScadParameters {
   private parameters: Map<string, ScadParameter> = new Map();
+  private parameterSets: Record<string, Record<string, string>> = {};
+  private activeSetName: string | undefined = undefined;
   private overrides: Map<string, string | number | boolean> = new Map();
   private onChange?: (event: {
     parameters: ScadParameter[];
+    parameterSets: Record<string, Record<string, string>>;
+    activeSetName: string | undefined;
     overrides: Record<string, string | number | boolean>;
   }) => void;
 
@@ -17,10 +21,21 @@ export class ScadParameters {
   }: {
     onChange?: (event: {
       parameters: ScadParameter[];
+      parameterSets: Record<string, Record<string, string>>;
+      activeSetName: string | undefined;
       overrides: Record<string, string | number | boolean>;
     }) => void;
   } = {}) {
     this.onChange = onChange;
+  }
+
+  private fireChange() {
+    this.onChange?.({
+      parameters: this.getParameters(),
+      parameterSets: this.parameterSets,
+      activeSetName: this.activeSetName,
+      overrides: this.getOverrides(),
+    });
   }
 
   /**
@@ -42,10 +57,43 @@ export class ScadParameters {
       }
     }
 
-    this.onChange?.({
-      parameters: this.getParameters(),
-      overrides: this.getOverrides(),
-    });
+    this.fireChange();
+  }
+
+  public updateParameterSets(sets: Record<string, Record<string, string>>) {
+    this.parameterSets = sets;
+    this.fireChange();
+  }
+
+  public getParameterSets(): Record<string, Record<string, string>> {
+    return this.parameterSets;
+  }
+
+  public setActiveSet(name: string | undefined) {
+    this.activeSetName = name;
+    this.overrides.clear();
+    
+    if (name && this.parameterSets[name]) {
+      const setValues = this.parameterSets[name];
+      for (const param of this.parameters.values()) {
+        if (param.name in setValues) {
+          const rawStr = setValues[param.name];
+          if (typeof param.value === "number") {
+             this.overrides.set(param.name, parseFloat(rawStr));
+          } else if (typeof param.value === "boolean") {
+             this.overrides.set(param.name, rawStr === "true");
+          } else {
+             this.overrides.set(param.name, rawStr);
+          }
+        }
+      }
+    }
+    
+    this.fireChange();
+  }
+
+  public getActiveSetName(): string | undefined {
+    return this.activeSetName;
   }
 
   /**
@@ -62,10 +110,7 @@ export class ScadParameters {
       this.overrides.set(name, value);
     }
 
-    this.onChange?.({
-      parameters: this.getParameters(),
-      overrides: this.getOverrides(),
-    });
+    this.fireChange();
   }
 
   public getParameters(): ScadParameter[] {
@@ -78,17 +123,32 @@ export class ScadParameters {
 
   /**
    * Returns a merged record of the active parameter values,
-   * combining default values with any updated overrides.
+   * combining default values exclusively with the flat active overrides map.
    */
   public getActiveValues(): Record<string, string | number | boolean> {
     const active: Record<string, string | number | boolean> = {};
 
     for (const param of this.parameters.values()) {
-      active[param.name] = this.overrides.has(param.name)
-        ? this.overrides.get(param.name)!
-        : param.value;
+      if (this.overrides.has(param.name)) {
+        active[param.name] = this.overrides.get(param.name)!;
+      } else {
+        active[param.name] = param.value;
+      }
     }
 
     return active;
+  }
+
+  /**
+   * Calculates a partial record of active values to save. 
+   * In the flat model, this is simply a direct string serialization of all explicit edits in the overrides bucket,
+   * protecting against future SCAD default value mutations.
+   */
+  public calculateActiveSetPartial(): Record<string, string> {
+    const partial: Record<string, string> = {};
+    for (const [name, value] of this.overrides) {
+      partial[name] = value.toString();
+    }
+    return partial;
   }
 }

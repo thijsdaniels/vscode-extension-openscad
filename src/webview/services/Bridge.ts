@@ -36,6 +36,22 @@ export class Bridge {
     vscode.postMessage({ type: "parameterChanged", name, value });
   }
 
+  public saveParameterSet(name: string) {
+    vscode.postMessage({ type: "saveParameterSet", name });
+  }
+
+  public promptSaveParameterSet() {
+    vscode.postMessage({ type: "promptSaveParameterSet" });
+  }
+
+  public deleteParameterSet(name: string) {
+    vscode.postMessage({ type: "deleteParameterSet", name });
+  }
+
+  public applyParameterSet(name: string | undefined) {
+    vscode.postMessage({ type: "applyParameterSet", name });
+  }
+
   public exportModel() {
     vscode.postMessage({ type: "exportModel" });
   }

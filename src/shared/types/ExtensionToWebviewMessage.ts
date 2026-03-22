@@ -12,6 +12,8 @@ export type ExtensionToWebviewMessage =
   | {
       type: "updateParameters";
       parameters: ScadParameter[];
+      parameterSets: Record<string, Record<string, string>>;
+      activeSetName: string | undefined;
       overrides: Record<string, string | number | boolean>;
     }
   | { type: "error"; message: string }

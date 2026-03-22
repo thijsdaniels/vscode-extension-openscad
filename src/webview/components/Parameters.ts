@@ -29,63 +29,54 @@ export class Parameters extends LitElement {
       flex-shrink: 0;
     }
 
-    .parameters {
-      flex-grow: 1;
-      padding: 16px;
-      overflow-y: auto;
+    .parameter-set-container {
+      padding: 1rem;
       display: flex;
       flex-direction: column;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--vscode-panel-border);
     }
 
-    .export-container {
+    .parameter-set-controls {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding: 16px;
-      border-top: 1px solid var(--vscode-panel-border);
-      flex-shrink: 0;
-    }
-
-    .export-button {
-      width: 100%;
-      display: flex;
+      gap: 0.5rem;
       align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-      border: none;
-      border-radius: 2px;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
     }
 
-    .export-button:hover {
-      background: var(--vscode-button-hoverBackground);
+    .parameter-set-controls vscode-single-select {
+      flex: 1;
     }
 
-    .export-button:active {
-      background: var(--vscode-button-activeBackground);
+    .parameter-set-actions {
+      display: flex;
+      gap: 0.25rem;
     }
 
-    h3 {
-      font-size: 14px;
-      margin: 0 0 12px 0;
-      color: var(--vscode-sideBarSectionHeader-foreground);
+    .parameters {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--vscode-panel-border);
     }
 
-    .parameter-group {
-      margin-bottom: 24px;
+    .parameters-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .panel-heading {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--vscode-panelTitle-foreground);
+      margin-bottom: 0.5rem;
     }
 
     .parameter {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: 0.5rem;
     }
 
     .parameter-label-container {
@@ -93,7 +84,7 @@ export class Parameters extends LitElement {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      gap: 0.5rem;
     }
 
     .parameter-label {
@@ -115,6 +106,21 @@ export class Parameters extends LitElement {
     vscode-single-select {
       width: 100%;
     }
+
+    .export-container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-top: 1px solid var(--vscode-panel-border);
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    .export-container vscode-button {
+      flex: 1;
+    }
   `;
 
   @property({ type: Boolean })
@@ -129,21 +135,63 @@ export class Parameters extends LitElement {
   private parameterContext!: ParameterContext;
 
   public render() {
-    const { parameters, overrides } = this.parameterContext;
+    const { parameters, overrides, parameterSets, activeSetName } =
+      this.parameterContext;
 
     const groups = this.groupParameters(parameters);
+    const setNames = Object.keys(parameterSets || {});
 
     return html`
-      <div class="parameters">
-        ${Array.from(groups.entries()).map(
-          ([groupName, parameters]) => html`
-            <div class="parameter-group">
-              <h3>${groupName}</h3>
+      <div class="parameter-set-container">
+        <span class="panel-heading">Preset</span class="panel-heading">
+        <div class="parameter-set-controls">
+          <vscode-single-select
+            .value=${activeSetName || ""}
+            @change=${(e: Event) => {
+              const val = (e.target as HTMLSelectElement).value;
+              this.parameterContext.applySet(val ? val : undefined);
+            }}
+          >
+            <vscode-option value="">None</vscode-option>
+            ${setNames.map(
+              (name) =>
+                html`<vscode-option value="${name}">${name}</vscode-option>`,
+            )}
+          </vscode-single-select>
+          <div class="parameter-set-actions">
+            ${
+              activeSetName
+                ? html`
+                    <vscode-toolbar-button
+                      icon="save"
+                      title="Save Active Preset"
+                      @click=${() =>
+                        this.parameterContext.saveSet(activeSetName)}
+                    ></vscode-toolbar-button>
+                    <vscode-toolbar-button
+                      icon="trash"
+                      title="Delete Active Preset"
+                      @click=${() =>
+                        this.parameterContext.deleteSet(activeSetName)}
+                    ></vscode-toolbar-button>
+                  `
+                : nothing
+            }
+            <vscode-toolbar-button
+              icon="save-as"
+              title="Save as New Preset"
+              @click=${() => this.parameterContext.saveAsNewSet()}
+            ></vscode-toolbar-button>
+          </div>
+        </div>
+      </div>
+      ${Array.from(groups.entries()).map(
+        ([groupName, parameters]) => html`
+          <vscode-collapsible class="parameters" heading="${groupName}" open>
+            <div class="parameters-inner">
               ${parameters.map((parameter) => {
                 const isOverridden = parameter.name in overrides;
-                const currentValue = isOverridden
-                  ? overrides[parameter.name]
-                  : parameter.value;
+                const currentValue = this.getCompoundValue(parameter);
 
                 return html`
                   <div class="parameter">
@@ -178,26 +226,24 @@ export class Parameters extends LitElement {
                 `;
               })}
             </div>
-          `,
-        )}
-      </div>
+          </vscode-collapsible>
+        `,
+      )}
       <div class="export-container">
-        <button
-          class="export-button"
+        <vscode-button
+          
           title="Send Model to 3D Slicer"
           @click=${() => this.modelContext.sendToSlicer()}
         >
-          <material-symbol name="print"></material-symbol>
           Print
-        </button>
-        <button
-          class="export-button"
+        </vscode-button>
+        <vscode-button
+          
           title="Write Model to File System"
           @click=${() => this.modelContext.export()}
         >
-          <material-symbol name="file_save"></material-symbol>
           Export
-        </button>
+        </vscode-button>
       </div>
     `;
   }
@@ -232,12 +278,28 @@ export class Parameters extends LitElement {
       .join(" ");
   }
 
+  private getCompoundValue(param: ScadParameter): string | number | boolean {
+    const { parameterSets, activeSetName, overrides } = this.parameterContext;
+    if (param.name in overrides) {
+      return overrides[param.name];
+    }
+    if (
+      activeSetName &&
+      parameterSets &&
+      parameterSets[activeSetName] &&
+      param.name in parameterSets[activeSetName]
+    ) {
+      const rawStr = parameterSets[activeSetName][param.name];
+      if (typeof param.value === "number") return Number(rawStr);
+      if (typeof param.value === "boolean") return rawStr === "true";
+      return rawStr;
+    }
+    return param.value;
+  }
+
   private handleInputChange(name: string, value: unknown) {
     if (this.parameterContext.override) {
-      this.parameterContext.override(
-        name,
-        value as string | number | boolean,
-      );
+      this.parameterContext.override(name, value as string | number | boolean);
     }
   }
 

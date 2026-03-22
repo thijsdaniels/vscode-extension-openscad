@@ -93,6 +93,8 @@ export class App extends LitElement {
   @state()
   parameterContext: ParameterContext = {
     parameters: [],
+    parameterSets: {},
+    activeSetName: undefined,
     overrides: {},
     get: (name) =>
       this.parameterContext.parameters.find((p) => p.name === name),
@@ -101,6 +103,18 @@ export class App extends LitElement {
     },
     revert: (name) => {
       bridge.updateParameterOverride(name, undefined);
+    },
+    saveSet: (name) => {
+      bridge.saveParameterSet(name);
+    },
+    saveAsNewSet: () => {
+      bridge.promptSaveParameterSet();
+    },
+    applySet: (name) => {
+      bridge.applyParameterSet(name);
+    },
+    deleteSet: (name) => {
+      bridge.deleteParameterSet(name);
     },
   };
 
@@ -146,6 +160,8 @@ export class App extends LitElement {
           this.parameterContext = {
             ...this.parameterContext,
             parameters: message.parameters,
+            parameterSets: message.parameterSets || {},
+            activeSetName: message.activeSetName,
             overrides: message.overrides || {},
           };
         } else {

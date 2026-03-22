@@ -56,6 +56,33 @@ export class ScadWebviewPanel {
           case "parameterChanged":
             this.session.updateParameterValue(message.name, message.value);
             return;
+          case "saveParameterSet":
+            this.session.saveParameterSet(message.name);
+            return;
+          case "promptSaveParameterSet":
+            window.showInputBox({
+              prompt: "Enter new parameter set name:",
+              placeHolder: "Preset Name",
+            }).then((name) => {
+              if (name && name.trim()) {
+                this.session.saveParameterSet(name.trim());
+              }
+            });
+            return;
+          case "deleteParameterSet":
+            window.showWarningMessage(
+              `Are you sure you want to delete the "${message.name}" parameter set?`,
+              { modal: true },
+              "Delete"
+            ).then((selection) => {
+              if (selection === "Delete") {
+                this.session.deleteParameterSet(message.name);
+              }
+            });
+            return;
+          case "applyParameterSet":
+            this.session.applyParameterSet(message.name);
+            return;
           case "exportModel":
             this.exportModel();
             return;
@@ -107,11 +134,13 @@ export class ScadWebviewPanel {
     );
 
     this.session.onParametersChanged(
-      ({ parameters, overrides }) => {
+      ({ parameters, parameterSets, activeSetName, overrides }) => {
         if (this.isWebviewReady) {
           this.postMessage({
             type: "updateParameters",
             parameters,
+            parameterSets,
+            activeSetName,
             overrides,
           });
         }
@@ -196,10 +225,15 @@ export class ScadWebviewPanel {
     // Send initial parameters
     const params = this.session.currentParameters;
     const overrides = this.session.currentOverrides;
+    const parameterSets = this.session.currentParameterSets;
+    const activeSetName = this.session.activeSetName;
+    
     if (params && params.length > 0) {
       this.postMessage({
         type: "updateParameters",
         parameters: params,
+        parameterSets,
+        activeSetName,
         overrides,
       });
     }
@@ -228,8 +262,13 @@ export class ScadWebviewPanel {
       return; // User cancelled
     }
 
+    // Attempt to inject Parameter Set Name if active
+    // We would need access to the session's activeSetName
+    const activeSetName = this.session.activeSetName;
+    const appendix = activeSetName ? ` - ${activeSetName}` : "";
+
     const defaultUri = Uri.file(
-      this.session.documentUri.fsPath.replace(/\.scad$/i, `.${format.value}`),
+      this.session.documentUri.fsPath.replace(/\.scad$/i, `${appendix}.${format.value}`),
     );
 
     const filters = {
@@ -281,10 +320,12 @@ export class ScadWebviewPanel {
           
           const buffer = await this.session.exportFormat(format);
           
+          const activeSetName = this.session.activeSetName;
+          const appendix = activeSetName ? `_${activeSetName.replace(/[^a-z0-9]/gi, '_')}` : "";
           const timestamp = new Date().getTime();
           const tmpFilePath = path.join(
             os.tmpdir(),
-            `openscad_preview_${timestamp}.${format}`,
+            `openscad_preview${appendix}_${timestamp}.${format}`,
           );
           const uri = Uri.file(tmpFilePath);
           

@@ -155,7 +155,8 @@ export class ScadNumberfield extends LitElement {
 
     if (newValue !== this.value) {
       this.value = newValue;
-      this.fireChangeEvent();
+      // Optional: dispatch 'input' if any listener wants high-frequency updates
+      this.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
     }
   };
 
@@ -169,6 +170,9 @@ export class ScadNumberfield extends LitElement {
     if (!this.hasMoved) {
       // Intercepted as a pure click! Enter editing mode.
       this.isEditing = true;
+    } else {
+      // Drag finished, commit the change.
+      this.fireChangeEvent();
     }
   };
 

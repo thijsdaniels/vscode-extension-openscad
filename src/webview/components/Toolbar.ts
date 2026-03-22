@@ -1,7 +1,6 @@
 import { consume } from "@lit/context";
 import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { classMap } from "lit/directives/class-map.js";
 import { PanelContext, panelContext } from "../contexts/PanelContext";
 import {
   CameraMode,
@@ -29,42 +28,42 @@ const viewSettingsButtons: ViewSettingsButtons = {
   camera: {
     states: [CameraMode.Perspective, CameraMode.Orthographic],
     icons: {
-      [CameraMode.Perspective]: "visibility",
-      [CameraMode.Orthographic]: "deployed_code",
+      [CameraMode.Perspective]: "device-camera",
+      [CameraMode.Orthographic]: "symbol-method",
     },
     defaultState: CameraMode.Perspective,
   },
   environment: {
     states: [Environment.None, Environment.Grid, Environment.BuildPlate],
     icons: {
-      [Environment.None]: "grid_off",
-      [Environment.Grid]: "grid_on",
-      [Environment.BuildPlate]: "square",
+      [Environment.None]: "eye-closed",
+      [Environment.Grid]: "symbol-numeric",
+      [Environment.BuildPlate]: "primitive-square",
     },
     defaultState: Environment.Grid,
   },
   renderMode: {
     states: [RenderMode.Solid, RenderMode.XRay, RenderMode.Wireframe],
     icons: {
-      [RenderMode.Solid]: "texture",
-      [RenderMode.XRay]: "opacity",
-      [RenderMode.Wireframe]: "language",
+      [RenderMode.Solid]: "circle-large-filled",
+      [RenderMode.XRay]: "color-mode",
+      [RenderMode.Wireframe]: "circle-slash",
     },
     defaultState: RenderMode.Solid,
   },
   colors: {
     states: [ColorMode.On, ColorMode.Off],
     icons: {
-      [ColorMode.On]: "palette",
-      [ColorMode.Off]: "format_color_reset",
+      [ColorMode.On]: "symbol-color",
+      [ColorMode.Off]: "paintcan",
     },
     defaultState: ColorMode.On,
   },
   shadows: {
     states: [ShadowMode.Off, ShadowMode.On],
     icons: {
-      [ShadowMode.Off]: "circle",
-      [ShadowMode.On]: "ev_shadow",
+      [ShadowMode.Off]: "circle-large",
+      [ShadowMode.On]: "color-mode",
     },
     defaultState: ShadowMode.On,
   },
@@ -88,60 +87,21 @@ export class PreviewToolbar extends LitElement {
       display: flex;
       flex-direction: row;
       align-items: center;
-      gap: 1rem;
+      gap: 0.5rem;
     }
 
-    .toolbar-segment {
+    .toolbar-options {
       display: flex;
       flex-direction: row;
       align-items: center;
+      gap: 1rem;
     }
 
-    .segment-button {
-      border: 1px solid var(--vscode-input-border);
-      border-right: none;
-      background: transparent;
-      color: var(--vscode-toolbar-foreground);
-      padding: 0.25rem;
-      font-size: 1rem;
-      cursor: pointer;
+    .toolbar-option {
       display: flex;
+      flex-direction: row;
       align-items: center;
-      justify-content: center;
-    }
-
-    .segment-button.primary {
-      background: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-    }
-
-    .segment-button:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-
-    .segment-button.primary:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-
-    .segment-button.active {
-      background: var(--vscode-toolbar-activeBackground);
-      color: var(--vscode-toolbar-activeForeground);
-    }
-
-    .segment-button.primary.active {
-      background: var(--vscode-button-activeBackground);
-      color: var(--vscode-button-activeForeground);
-    }
-
-    .segment-button.first {
-      border-top-left-radius: 0.25rem;
-      border-bottom-left-radius: 0.25rem;
-    }
-
-    .segment-button.last {
-      border-top-right-radius: 0.25rem;
-      border-bottom-right-radius: 0.25rem;
-      border-right: 1px solid var(--vscode-input-border);
+      gap: 0.25rem;
     }
   `;
 
@@ -156,59 +116,44 @@ export class PreviewToolbar extends LitElement {
   render() {
     return html`
       <div class="toolbar-section">
-        ${mapObject(viewSettingsButtons, ([key, button]) => {
-          return html`
-            <div class="toolbar-segment">
-              ${button.states.map((state, index) => {
-                const currentValue = this.viewSettings.get(key);
-                const isActive = currentValue === state;
+        <div class="toolbar-options">
+          ${mapObject(viewSettingsButtons, ([key, button]) => {
+            return html`
+              <div class="toolbar-option">
+                ${button.states.map((state) => {
+                  const currentValue = this.viewSettings.get(key);
+                  const isActive = currentValue === state;
 
-                return html`
-                  <button
-                    class=${classMap({
-                      "segment-button": true,
-                      first: index === 0,
-                      last: index === button.states.length - 1,
-                      active: isActive,
-                    })}
-                    title=${`${key}: ${state}`}
-                    @click=${() => this.viewSettings.set(key, state)}
-                  >
-                    <material-symbol
-                      name=${button.icons[state as keyof typeof button.icons]}
-                    ></material-symbol>
-                  </button>
-                `;
-              })}
-            </div class="toolbar-segment">
-          `;
-        })}
+                  return html`
+                    <vscode-toolbar-button
+                      toggleable
+                      .checked=${isActive}
+                      title=${`${key}: ${state}`}
+                      icon=${button.icons[state as keyof typeof button.icons]}
+                      @change=${() => this.viewSettings.set(key, state)}
+                    ></vscode-toolbar-button>
+                  `;
+                })}
+              </div>
+            `;
+          })}
+        </div>
       </div>
       <div class="toolbar-section">
-        <div class="toolbar-segment">
-          <button
-            class=${classMap({
-              "segment-button": true,
-              last: true,
-              active: this.panelContext.panels.debug,
-            })}
-            title="Toggle Log"
-            @click=${() => this.panelContext.toggle("debug")}
-          >
-            <material-symbol name="code"></material-symbol>
-          </button>
-          <button
-            class=${classMap({
-              "segment-button": true,
-              first: true,
-              active: this.panelContext.panels.parameters,
-            })}
-            title="Toggle Parameters"
-            @click=${() => this.panelContext.toggle("parameters")}
-          >
-            <material-symbol name="build"></material-symbol>
-          </button>
-        </div>
+        <vscode-toolbar-button
+          icon="output"
+          title="Toggle Log"
+          toggleable
+          .checked=${this.panelContext.panels.debug}
+          @change=${() => this.panelContext.toggle("debug")}
+        ></vscode-toolbar-button>
+        <vscode-toolbar-button
+          icon="settings"
+          title="Toggle Parameters"
+          toggleable
+          .checked=${this.panelContext.panels.parameters}
+          @change=${() => this.panelContext.toggle("parameters")}
+        ></vscode-toolbar-button>
       </div>
     `;
   }
