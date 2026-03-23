@@ -40,7 +40,7 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.x",
     "@types/three": "^0.183.1",
-    "@types/vscode": "^1.109.0",
+    "@types/vscode": "^1.105.1",
     "@types/vscode-webview": "^1.57.5",
     "esbuild": "^0.27.3",
     "eslint": "^10.0.2",
@@ -52,7 +52,7 @@
     "vscode-test": "^1.6.1"
   },
   "engines": {
-    "vscode": "^1.109.0"
+    "vscode": "^1.105.1"
   },
   "contributes": {
     "configuration": {
@@ -133,6 +133,7 @@
     "language-configuration.json",
     "icon.png",
     "LICENSE.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "node_modules/@vscode/codicons/dist"
   ]
 }
