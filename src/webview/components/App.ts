@@ -123,6 +123,8 @@ export class App extends LitElement {
   modelContext: ModelContext = {
     format: null,
     base64Data: null,
+    isLoading: true,
+    loadingMessage: "Rendering SCAD...",
     export: bridge.exportModel,
     sendToSlicer: bridge.sendToSlicer,
   };
@@ -150,6 +152,7 @@ export class App extends LitElement {
             ...this.modelContext,
             format: message.format,
             base64Data: message.content,
+            isLoading: false,
           };
         } else {
           bridge.reportError("No content in update message");
@@ -170,6 +173,11 @@ export class App extends LitElement {
         break;
       case "loadingState":
         this.logController.processLoadingState(message.loading);
+        this.modelContext = {
+          ...this.modelContext,
+          isLoading: message.loading,
+          loadingMessage: message.message ?? "Rendering SCAD...",
+        };
         break;
       case "log":
         if (message.message) {
@@ -182,11 +190,13 @@ export class App extends LitElement {
   render() {
     return html`
       ${this.withBottomPanel(
-        this.withRightPanel(
-          this.renderPreviewWithToolbar(),
-          this.panelContext.panels.parameters
-            ? html`<scad-parameters></scad-parameters>`
-            : null,
+        this.withToolbar(
+          this.withRightPanel(
+            html`<scad-preview></scad-preview>`,
+            this.panelContext.panels.parameters
+              ? html`<scad-parameters></scad-parameters>`
+              : null,
+          ),
         ),
         this.panelContext.panels.debug ? html`<scad-debug></scad-debug>` : null,
       )}
@@ -222,7 +232,7 @@ export class App extends LitElement {
       <vscode-split-layout
         style="width: 100%; height: 100%; --separator-border: transparent; border: none;"
         split="vertical"
-        fixed="end"
+        fixed-pane="end"
         handle-position=${this.parameterPanelSize}
         @vsc-split-layout-change=${(e: CustomEvent) =>
           this.handleResize("right", e)}
@@ -233,7 +243,7 @@ export class App extends LitElement {
     `;
   }
 
-  private renderPreviewWithToolbar() {
+  private withToolbar(main: TemplateResult) {
     if (!this.panelContext.panels.toolbar) {
       return html`<scad-preview></scad-preview>`;
     }
@@ -241,7 +251,7 @@ export class App extends LitElement {
     return html`
       <div style="display: flex; flex-direction: column; height: 100%;">
         <scad-toolbar></scad-toolbar>
-        <scad-preview style="flex: 1;"></scad-preview>
+        ${main}
       </div>
     `;
   }

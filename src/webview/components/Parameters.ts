@@ -9,6 +9,7 @@ import {
   ParameterContext,
 } from "../contexts/ParameterContext";
 import "./MaterialSymbol";
+import "./ScadCollapsible";
 import "./ScadNumberfield";
 
 declare global {
@@ -24,52 +25,24 @@ export class Parameters extends LitElement {
       display: flex;
       flex-direction: column;
       height: 100%;
-      background: var(--vscode-panel-background);
+      background: var(--vscode-editor-background);
       border-left: 1px solid var(--vscode-panel-border);
       flex-shrink: 0;
     }
 
-    .parameter-set-container {
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      border-bottom: 1px solid var(--vscode-panel-border);
-    }
-
-    .parameter-set-controls {
+    .preset-controls {
       display: flex;
       gap: 0.5rem;
       align-items: center;
     }
 
-    .parameter-set-controls vscode-single-select {
+    .preset-controls vscode-single-select {
       flex: 1;
     }
 
-    .parameter-set-actions {
+    .preset-actions {
       display: flex;
       gap: 0.25rem;
-    }
-
-    .parameters {
-      padding: 0.5rem;
-      border-bottom: 1px solid var(--vscode-panel-border);
-    }
-
-    .parameters-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      padding: 0.5rem;
-    }
-
-    .panel-heading {
-      font-size: 11px;
-      text-transform: uppercase;
-      font-weight: 600;
-      color: var(--vscode-panelTitle-foreground);
-      margin-bottom: 0.5rem;
     }
 
     .parameter {
@@ -96,6 +69,7 @@ export class Parameters extends LitElement {
     }
 
     .input-container {
+      display: flex;
       width: 50%;
     }
 
@@ -142,9 +116,8 @@ export class Parameters extends LitElement {
     const setNames = Object.keys(parameterSets || {});
 
     return html`
-      <div class="parameter-set-container">
-        <span class="panel-heading">Preset</span class="panel-heading">
-        <div class="parameter-set-controls">
+      <scad-collapsible heading="Preset" open>
+        <div class="preset-controls">
           <vscode-single-select
             .value=${activeSetName || ""}
             @change=${(e: Event) => {
@@ -158,25 +131,22 @@ export class Parameters extends LitElement {
                 html`<vscode-option value="${name}">${name}</vscode-option>`,
             )}
           </vscode-single-select>
-          <div class="parameter-set-actions">
-            ${
-              activeSetName
-                ? html`
-                    <vscode-toolbar-button
-                      icon="save"
-                      title="Save Active Preset"
-                      @click=${() =>
-                        this.parameterContext.saveSet(activeSetName)}
-                    ></vscode-toolbar-button>
-                    <vscode-toolbar-button
-                      icon="trash"
-                      title="Delete Active Preset"
-                      @click=${() =>
-                        this.parameterContext.deleteSet(activeSetName)}
-                    ></vscode-toolbar-button>
-                  `
-                : nothing
-            }
+          <div class="preset-actions">
+            ${activeSetName
+              ? html`
+                  <vscode-toolbar-button
+                    icon="save"
+                    title="Save Active Preset"
+                    @click=${() => this.parameterContext.saveSet(activeSetName)}
+                  ></vscode-toolbar-button>
+                  <vscode-toolbar-button
+                    icon="trash"
+                    title="Delete Active Preset"
+                    @click=${() =>
+                      this.parameterContext.deleteSet(activeSetName)}
+                  ></vscode-toolbar-button>
+                `
+              : nothing}
             <vscode-toolbar-button
               icon="save-as"
               title="Save as New Preset"
@@ -184,61 +154,54 @@ export class Parameters extends LitElement {
             ></vscode-toolbar-button>
           </div>
         </div>
-      </div>
+      </scad-collapsible>
       ${Array.from(groups.entries()).map(
         ([groupName, parameters]) => html`
-          <vscode-collapsible class="parameters" heading="${groupName}" open>
-            <div class="parameters-inner">
-              ${parameters.map((parameter) => {
-                const isOverridden = parameter.name in overrides;
-                const currentValue = this.getCompoundValue(parameter);
+          <scad-collapsible heading="${groupName}" open>
+            ${parameters.map((parameter) => {
+              const isOverridden = parameter.name in overrides;
+              const currentValue = this.getCompoundValue(parameter);
 
-                return html`
-                  <div class="parameter">
-                    <div class="parameter-label-container">
-                      <label
-                        title="${parameter.description}"
-                        class=${classMap({
-                          "parameter-label": true,
-                          "parameter-label--overridden": isOverridden,
-                        })}
-                      >
-                        ${this.formatParameterName(parameter.name, groupName)}
-                      </label>
-                      ${isOverridden
-                        ? html`
-                            <vscode-toolbar-button
-                              icon="discard"
-                              title="Revert"
-                              @click=${() =>
-                                this.handleInputChange(
-                                  parameter.name,
-                                  undefined,
-                                )}
-                            ></vscode-toolbar-button>
-                          `
-                        : nothing}
-                    </div>
-                    <div class="input-container">
-                      ${this.renderInput(parameter, currentValue)}
-                    </div>
+              return html`
+                <div class="parameter">
+                  <div class="parameter-label-container">
+                    <label
+                      title="${parameter.description}"
+                      class=${classMap({
+                        "parameter-label": true,
+                        "parameter-label--overridden": isOverridden,
+                      })}
+                    >
+                      ${this.formatParameterName(parameter.name, groupName)}
+                    </label>
+                    ${isOverridden
+                      ? html`
+                          <vscode-toolbar-button
+                            icon="discard"
+                            title="Revert"
+                            @click=${() =>
+                              this.handleInputChange(parameter.name, undefined)}
+                          ></vscode-toolbar-button>
+                        `
+                      : nothing}
                   </div>
-                `;
-              })}
-            </div>
-          </vscode-collapsible>
+                  <div class="input-container">
+                    ${this.renderInput(parameter, currentValue)}
+                  </div>
+                </div>
+              `;
+            })}
+          </scad-collapsible>
         `,
       )}
       <div class="export-container">
         <vscode-button
-          
           title="Send Model to 3D Slicer"
           @click=${() => this.modelContext.sendToSlicer()}
         >
           Print
         </vscode-button>
         <vscode-button
-          
           title="Write Model to File System"
           @click=${() => this.modelContext.export()}
         >

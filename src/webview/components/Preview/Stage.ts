@@ -106,6 +106,10 @@ export class Stage {
     if (width === 0 || height === 0) return;
     this.renderer.setSize(width, height);
     this.cameraRig.resize(width, height);
+    // Render immediately to fill the canvas before the browser paints.
+    // Changing canvas width/height attributes clears it, and the animation
+    // loop only re-renders on the next RAF — causing a one-frame flicker.
+    this.renderer.render(this.scene, this.cameraRig.activeCamera);
   }
 
   public applySettings(viewSettings: ViewSettingsContext) {

@@ -21,7 +21,7 @@ export class Debug extends LitElement {
       display: flex;
       height: 100%;
       flex-direction: column;
-      background: var(--vscode-panel-background);
+      background: var(--vscode-editor-background);
       border-top: 1px solid var(--vscode-panel-border);
       overflow: hidden;
     }

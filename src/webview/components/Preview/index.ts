@@ -40,29 +40,28 @@ export class Preview extends LitElement {
 
     #loading-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--vscode-editor-background);
-      opacity: 0.8;
+      bottom: 1rem;
+      left: 1rem;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
       align-items: center;
+      gap: 1rem;
       z-index: 1000;
       color: var(--vscode-foreground);
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 0.25rem;
+      padding: 0.75rem 1rem 0.75rem 0.75rem;
+      pointer-events: none;
     }
 
     .spinner {
-      border: 4px solid
+      border: 2px solid
         var(--vscode-editorGhostText-border, rgba(255, 255, 255, 0.1));
-      border-top: 4px solid var(--vscode-button-background);
+      border-top: 2px solid var(--vscode-button-background);
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
       animation: spin 1s linear infinite;
-      margin-bottom: 16px;
     }
 
     @keyframes spin {
@@ -186,11 +185,13 @@ export class Preview extends LitElement {
 
   render() {
     return html`
-      ${!this.modelContext?.base64Data
+      ${this.modelContext?.isLoading || !this.modelContext?.base64Data
         ? html`
             <div id="loading-overlay">
               <div class="spinner"></div>
-              <div>Rendering SCAD...</div>
+              <div>
+                ${this.modelContext?.loadingMessage ?? "Rendering SCAD..."}
+              </div>
             </div>
           `
         : ""}
@@ -222,17 +223,16 @@ function getTheme(): Theme {
       isDark(background) ? 0.05 : 0.35,
     );
 
-  const plate = background
-    .clone()
-    .lerp(
-      new Color(styles.getPropertyValue("--vscode-button-background").trim()),
-      0.15,
-    );
+  const plate = new Color(
+    styles.getPropertyValue("--vscode-button-secondaryBackground").trim(),
+  );
 
   const plateGrid = plate
     .clone()
     .lerp(
-      new Color(styles.getPropertyValue("--vscode-button-foreground").trim()),
+      new Color(
+        styles.getPropertyValue("--vscode-button-secondaryForeground").trim(),
+      ),
       0.05,
     );
 
