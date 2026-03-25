@@ -1,5 +1,11 @@
 # vscode-openscad-preview
 
+## 0.3.0
+
+### Minor Changes
+
+- 7fc6e0c: Layout and several UI elements have been improved.
+
 ## 0.2.1
 
 ### Patch Changes
