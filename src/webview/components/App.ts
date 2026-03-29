@@ -11,10 +11,8 @@ import {
 } from "../contexts/ParameterContext";
 import {
   CameraMode,
-  ColorMode,
   Environment,
   RenderMode,
-  ShadowMode,
   viewSettingsContext,
   ViewSettingsContext,
 } from "../contexts/ViewSettingsContext";
@@ -73,8 +71,9 @@ export class App extends LitElement {
       environment: Environment.Grid,
       renderMode: RenderMode.Solid,
       camera: CameraMode.Perspective,
-      shadows: ShadowMode.On,
-      colors: ColorMode.On,
+      shadows: true,
+      colors: true,
+      crossSection: false,
     },
     get: (key) => this.viewSettingsContext.settings[key],
     is: (key, value) => this.viewSettingsContext.settings[key] === value,

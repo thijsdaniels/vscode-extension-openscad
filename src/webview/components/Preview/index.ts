@@ -107,6 +107,7 @@ export class Preview extends LitElement {
     if (this.modelContext?.base64Data) {
       this.stage.loadModelData(this.modelContext);
     }
+
   }
 
   // Bridging the declarative Lit cycle with the imperative Three.js cycle
@@ -130,6 +131,7 @@ export class Preview extends LitElement {
     if (changedProperties.has("modelContext") && this.modelContext) {
       this.stage.loadModelData(this.modelContext);
     }
+
   }
 
   disconnectedCallback() {
@@ -244,6 +246,10 @@ function getTheme(): Theme {
     styles.getPropertyValue("--vscode-editor-foreground").trim(),
   );
 
+  const accent = new Color(
+    styles.getPropertyValue("--vscode-button-background").trim(),
+  );
+
   return {
     background,
     fog,
@@ -253,6 +259,7 @@ function getTheme(): Theme {
     plateGrid,
     additive,
     subtractive,
+    accent,
   };
 }
 
